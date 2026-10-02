@@ -38,3 +38,14 @@ test("findYtDlp falls back to the managed copy, else null", () => {
   if (process.platform !== "linux") return;
   expect(findYtDlp(env as NodeJS.ProcessEnv)).toBeNull();
 });
+
+test("ytDlpError trims yt-dlp FAQ pointers and recognises 'is unavailable'", () => {
+  const age = ytDlpError(
+    "ERROR: [youtube] HtVdAasjOgU: Sign in to confirm your age. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ",
+  );
+  expect(age.code).toBe("UNAVAILABLE");
+  expect(age.message).toBe("yt-dlp: Sign in to confirm your age.");
+  expect(ytDlpError("ERROR: [youtube] aaaaaaaaaaa: This video is unavailable").code).toBe(
+    "NOT_FOUND",
+  );
+});

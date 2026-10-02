@@ -1,5 +1,5 @@
-// Locating and running yt-dlp. A system install is preferred; otherwise a managed copy in
-// the data dir (installed by `yt-data update --yt-dlp`) is used.
+// Locating and running yt-dlp: YT_DATA_YTDLP, else the managed copy in the data dir
+// (installed by `yt-data update --yt-dlp`), else yt-dlp on PATH.
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -29,11 +29,12 @@ export function findYtDlp(env: NodeJS.ProcessEnv = process.env): YtDlpLocation |
     }
     return { path: env.YT_DATA_YTDLP, kind: "env" };
   }
+  // A managed copy only exists if the user asked for it (`yt-data update --yt-dlp`), so it
+  // wins over whatever happens to be on PATH.
   const managed = managedYtDlpPath(env);
-  const system = Bun.which("yt-dlp", { PATH: env.PATH ?? "" });
-  if (system && system !== managed) return { path: system, kind: "system" };
   if (existsSync(managed)) return { path: managed, kind: "managed" };
-  return null;
+  const system = Bun.which("yt-dlp", { PATH: env.PATH ?? "" });
+  return system ? { path: system, kind: "system" } : null;
 }
 
 export function requireYtDlp(env: NodeJS.ProcessEnv = process.env): YtDlpLocation {
@@ -86,7 +87,9 @@ export function ytDlpError(stderr: string): CliError {
       .split("\n")
       .filter((l) => l.startsWith("ERROR:"))
       .at(-1)
-      ?.replace(/^ERROR:\s*(\[[^\]]+\]\s*)?([\w-]{11}:\s*)?/, "") ??
+      ?.replace(/^ERROR:\s*(\[[^\]]+\]\s*)?([\w-]{11}:\s*)?/, "")
+      // Drop yt-dlp's FAQ pointers; our hint covers the next step.
+      .replace(/\s+(Use --cookies|See\s+https?:).*$/s, "") ??
     stderr.trim().split("\n").at(-1) ??
     "yt-dlp failed";
   if (/not a bot|HTTP Error 429|too many requests/i.test(line)) {
@@ -107,7 +110,7 @@ export function ytDlpError(stderr: string): CliError {
       "Pass --cookies from a logged-in session",
     );
   }
-  if (/video unavailable|does not exist|not found|removed/i.test(line)) {
+  if (/video (is )?unavailable|does not exist|not found|removed/i.test(line)) {
     return new CliError("NOT_FOUND", `yt-dlp: ${line}`);
   }
   if (/unable to download|connection|timed out|resolve host/i.test(line)) {
@@ -153,4 +156,37 @@ export async function fetchSubtitles(
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+}
+
+/**
+ * Run yt-dlp, calling `onLine` for each stdout line as it arrives. stderr is captured for
+ * error mapping.
+ */
+export async function runYtDlpStreaming(
+  path: string,
+  args: string[],
+  onLine: (line: string) => void,
+): Promise<RunResult> {
+  log.debug(`running ${path} ${args.join(" ")}`);
+  const proc = Bun.spawn([path, ...args], { stdout: "pipe", stderr: "pipe", stdin: "ignore" });
+  const stderrText = new Response(proc.stderr).text();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let stdout = "";
+  for await (const chunk of proc.stdout) {
+    const text = decoder.decode(chunk, { stream: true });
+    stdout += text;
+    buffer += text;
+    // yt-dlp ends progress updates with \r on a TTY and \n with --newline.
+    const lines = buffer.split(/\r?\n|\r/);
+    buffer = lines.pop() ?? "";
+    for (const line of lines) if (line) onLine(line);
+  }
+  if (buffer) onLine(buffer);
+  const [stderr, code] = await Promise.all([stderrText, proc.exited]);
+  return { code, stdout, stderr };
+}
+
+export function findFfmpeg(env: NodeJS.ProcessEnv = process.env): string | null {
+  return Bun.which("ffmpeg", { PATH: env.PATH ?? "" });
 }

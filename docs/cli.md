@@ -2,7 +2,8 @@
 
 > This file is also what `yt-data docs` prints, so keep it accurate and example-heavy.
 >
-> **Implemented:** `channel`, `video`, `videos`, `transcript`, `thumbnail`. Sections marked _(planned)_ are the v1 spec and
+> **Implemented:** `channel`, `video`, `videos`, `transcript`, `thumbnail`, `download`,
+> `update`, `doctor`. Sections marked _(planned)_ are the v1 spec and
 > land per the phases in [`plan.md`](plan.md).
 
 ## Synopsis
@@ -23,7 +24,7 @@ yt-data <command> [options] [refs...]
 | `--no-cache` | | Don't read or write cached data |
 | `--refresh` | | Ignore cached results but store fresh ones |
 | `--cookies <file>` | | Netscape cookies.txt for age-restricted / members-only content |
-| `--cookies-from-browser <name>` | | _(planned, with `download`)_ `chrome`, `firefox`, … (passed to yt-dlp) |
+| `--cookies-from-browser <name>` | | Browser to take cookies from for yt-dlp: `chrome`, `firefox`, `brave`, … |
 | `--proxy <url>` | | HTTP/SOCKS proxy |
 | `--region <code>` | `US` | Content region (2-letter country code) |
 | `-q, --quiet` | | Suppress stderr logs (errors still printed) |
@@ -152,39 +153,69 @@ yt-data thumbnail dQw4w9WgXcQ -o ./thumbs
 yt-data thumbnail dQw4w9WgXcQ --quality hq --url-only --fields url
 ```
 
-### `download <ref...>` _(planned)_
+### `download <refs...>`
 
-Wraps yt-dlp.
+Downloads with yt-dlp, one video at a time. Prints one JSON record per finished file:
+`{id, title, path, ext, formatId, resolution, sizeBytes}`. yt-dlp's progress is shown on
+stderr when it is a terminal (never mixed into stdout).
 
 | Option | Default | Description |
 |---|---|---|
-| `--quality <q>` | `best` | `best`, `2160p`, `1440p`, `1080p`, `720p`, `480p`, `audio` |
-| `--audio-format <f>` | `m4a` | When `--quality audio`: `m4a`, `mp3`, `opus` |
+| `--quality <q>` | `best` | `best`, `2160p`, `1440p`, `1080p`, `720p`, `480p`, `360p` (maximum height), or `audio` |
+| `--audio-format <f>` | `m4a` | With `--quality audio`: `m4a`, `mp3`, `opus` |
 | `-o, --output <dir>` | `.` | Output directory |
 | `--template <tpl>` | `%(title)s [%(id)s].%(ext)s` | yt-dlp output template |
-| `--with-subs` | | Also write subtitles |
-| `--with-thumbnail` | | Also write thumbnail |
-| `--yt-dlp-args <args>` | | Extra raw args passed through to yt-dlp |
+| `--with-subs [langs]` | | Also write `.srt` subtitles (comma-separated languages, default `en`) |
+| `--with-thumbnail` | | Also write the thumbnail as `.jpg` |
+| `--yt-dlp-args <args>` | | Extra arguments passed to yt-dlp verbatim (quoted string) |
 
-Prints one JSON object per finished file: `{id, path, format, sizeBytes}`.
-Progress goes to stderr.
+Video is merged into mp4 when the codecs allow it, else mkv. Without ffmpeg, only
+pre-merged files are available (usually ≤360p, with a warning) and audio stays m4a.
+Age-restricted / members-only videos need `--cookies` or `--cookies-from-browser`.
 
-### `update` _(planned)_
+```
+yt-data download dQw4w9WgXcQ --quality 1080p -o ./downloads
+yt-data download dQw4w9WgXcQ --quality audio --audio-format mp3
+yt-data download dQw4w9WgXcQ --with-subs en,de --with-thumbnail
+yt-data videos @mkbhd -n 3 -f ndjson --fields id | jq -r .id | yt-data download - --quality 720p
+```
+
+### `update`
+
+Updates yt-data itself (release binaries only) and installs / updates the **managed**
+yt-dlp in the data directory (`~/.local/share/yt-data/bin/yt-dlp` on Linux). Every download
+is checked against the release's SHA-256 checksums and swapped in atomically. A
+system-installed yt-dlp is never modified; once the managed copy exists it takes
+precedence, and the output says how to upgrade the system one.
 
 | Option | Description |
 |---|---|
 | `--self` | Only update yt-data |
-| `--yt-dlp` | Only update (or install) the managed yt-dlp |
-| `--check` | Report available updates as JSON; change nothing |
-| `--yt-dlp-channel <c>` | `stable` (default) or `nightly` |
+| `--yt-dlp` | Only install / update the managed yt-dlp |
+| `--check` | Report current and latest versions as JSON; change nothing |
+| `--yt-dlp-channel <c>` | `stable` (default) or `nightly` (YouTube fixes often land there first) |
 
-A system-installed yt-dlp is never modified; the command prints the right upgrade
-command for how it was installed.
+Output: `{self: {action, from, to, …}, ytDlp: {action, path, from, to, channel, …}}` with
+`action` one of `installed`, `updated`, `current`, `skipped`, `failed`. When running from
+source, self-update is skipped.
 
-### `doctor` _(planned)_
+A once-a-day check prints "yt-data X is available" to stderr — only when stderr is a
+terminal. Disable with `YT_DATA_NO_UPDATE_CHECK=1` or `"updateCheck": false`.
 
-Checks yt-dlp (path, version, managed/system), ffmpeg, network, and runs a tiny request
-against each data source. Exit 0 if everything required is OK.
+### `doctor`
+
+Checks yt-dlp (location, version, flags versions older than 90 days), ffmpeg, the cache
+directory and config, then makes one small request per data source: InnerTube session,
+video metadata, caption tracks, thumbnails and yt-dlp format extraction.
+
+| Option | Description |
+|---|---|
+| `--offline` | Only check local dependencies |
+
+Output: `{ok, version, platform, checks[{name, ok, required, detail, hint}]}` (`--format
+table` prints just the checks). Exit 0 when every required check passes, otherwise the
+exit code of the first failing required check. yt-dlp and ffmpeg are reported but not
+required, since only `download` and the transcript fallback need them.
 
 ### `schema [command]` _(planned)_
 
@@ -232,6 +263,19 @@ session (3 days). Listings are never cached. Entries are discarded when yt-data 
 
 ## Environment
 
-`YT_DATA_CONFIG`, `YT_DATA_CACHE_DIR`, `YT_DATA_NO_CACHE`, `YT_DATA_NO_UPDATE_CHECK`,
-`YT_DATA_YTDLP`, `YT_DATA_COOKIES`, `YT_DATA_PROXY`, `YT_DATA_LOG`.
+| Variable | Meaning |
+|---|---|
+| `YT_DATA_CONFIG` | Config file path (default `~/.config/yt-data/config.json`) |
+| `YT_DATA_CACHE_DIR` | Cache directory |
+| `YT_DATA_NO_CACHE` | `1` = like `--no-cache` |
+| `YT_DATA_NO_UPDATE_CHECK` | `1` = no daily update notice |
+| `YT_DATA_YTDLP` | Use this yt-dlp executable |
+| `YT_DATA_COOKIES` | Like `--cookies` |
+| `YT_DATA_COOKIES_FROM_BROWSER` | Like `--cookies-from-browser` |
+| `YT_DATA_PROXY` | Like `--proxy` |
+| `YT_DATA_LOG` | `silent`, `error`, `warn` (default), `info`, `debug` |
+| `GITHUB_TOKEN` | Optional; raises GitHub API limits for `update` |
+
+Config file keys: `format`, `region`, `cookies`, `cookiesFromBrowser`, `proxy`, `cacheDir`,
+`noCache`, `updateCheck`, `logLevel`.
 Precedence: flag > env > config file > default.

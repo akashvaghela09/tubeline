@@ -7,6 +7,13 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 ## [Unreleased]
 
 ### Added
+- `yt-data download <refs...>`: video/audio downloads via yt-dlp with quality caps,
+  mp3/opus/m4a audio, subtitles, thumbnails, custom templates and pass-through args;
+  JSON record per file, progress on stderr only at a terminal.
+- `yt-data update`: verified, atomic self-update from GitHub Releases and managed yt-dlp
+  install/update (stable or nightly), `--check`; daily update notice on interactive stderr.
+- `yt-data doctor`: dependency, cache and per-source health checks, stale yt-dlp warning.
+- `--cookies-from-browser` (yt-dlp only).
 - `yt-data transcript <refs...>`: captions as json / txt / vtt / srt, language and
   manual/auto selection, `--list`, `--timestamps`, `-o` file or directory, yt-dlp fallback.
 - `yt-data thumbnail <refs...>`: best-available thumbnail download or `--url-only`.

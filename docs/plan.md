@@ -1,6 +1,6 @@
 # yt-data — Project Plan
 
-Status: **Phase 3 done** (`channel`, `video`, `videos`, `transcript`, `thumbnail`) · Last updated: 2026-10-03
+Status: **Phase 5 done** (all v1 data commands, `download`, `doctor`, `update`) · Last updated: 2026-10-03
 
 ## 1. Goal
 
@@ -25,7 +25,7 @@ page and machine-readable output.
 | Metadata source | InnerTube (YouTube's internal JSON API) via `youtubei.js` | Plain HTTP, no browser, fast, includes transcripts. |
 | Metadata fallback | `yt-dlp --dump-json` / `--flat-playlist` | Independent second source when InnerTube parsing breaks. |
 | Downloads | `yt-dlp` subprocess (+ `ffmpeg` for merging) | Most actively maintained against YouTube changes. |
-| yt-dlp provisioning | System `yt-dlp` if present, else a managed binary in the data dir | Works out of the box; respects users who manage their own. |
+| yt-dlp provisioning | Managed binary in the data dir if installed (`update --yt-dlp`), else system `yt-dlp` | Works out of the box; an explicit install beats a possibly stale distro package; system installs are never modified. |
 | Browser automation | Not in v1; optional Playwright fallback later | ~300 MB Chromium is overkill for JSON endpoints. |
 | CLI name | `yt-data` | |
 | License | MIT | |
@@ -279,8 +279,8 @@ Precedence: flag > env > config file > default.
 | 1 | Core: `resolve`, `output`, `errors`, `config`, `http`; `channel`, `video` | ✅ |
 | 2 | `videos` (pagination, `--limit`, `--type`, `--full`), cache | ✅ |
 | 3 | `transcript` (InnerTube → yt-dlp fallback), `thumbnail` | ✅ |
-| 4 | yt-dlp manager + `download`; `doctor` | Downloads 1080p + audio-only; doctor reports all deps |
-| 5 | `update` (self + yt-dlp), update notices | Updates from a real GitHub Release |
+| 4 | yt-dlp manager + `download`; `doctor` | ✅ |
+| 5 | `update` (self + yt-dlp), update notices | ✅ (self-update verified at first release) |
 | 6 | Docs: man page, `docs`, `schema`, README polish | `man yt-data` works after install |
 | 7 | CI + release pipeline, `install.sh` | Tagged release installs on Linux/macOS/Windows |
 | Later | search, comments, playlists CRUD, Data API v3 backend, Whisper, MCP server, Playwright fallback | — |

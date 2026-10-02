@@ -17,6 +17,7 @@ const FileConfig = z
     format: z.enum(FORMATS),
     region: z.string().regex(/^[A-Za-z]{2}$/),
     cookies: z.string(),
+    cookiesFromBrowser: z.string(),
     proxy: z.string(),
     cacheDir: z.string(),
     noCache: z.boolean(),
@@ -30,6 +31,8 @@ export interface Config {
   format: Format;
   region: string;
   cookies?: string;
+  /** Only used by yt-dlp (downloads, transcript fallback). */
+  cookiesFromBrowser?: string;
   proxy?: string;
   cacheDir: string;
   noCache: boolean;
@@ -43,6 +46,7 @@ export interface GlobalFlags {
   format?: string;
   region?: string;
   cookies?: string;
+  cookiesFromBrowser?: string;
   proxy?: string;
   cache?: boolean; // commander maps --no-cache to cache=false
   refresh?: boolean;
@@ -110,6 +114,11 @@ export function loadConfig(flags: GlobalFlags = {}, env: NodeJS.ProcessEnv = pro
     format: format as Format,
     region,
     cookies: pick(flags.cookies, env.YT_DATA_COOKIES || undefined, file.cookies),
+    cookiesFromBrowser: pick(
+      flags.cookiesFromBrowser,
+      env.YT_DATA_COOKIES_FROM_BROWSER || undefined,
+      file.cookiesFromBrowser,
+    ),
     proxy: pick(flags.proxy, env.YT_DATA_PROXY || undefined, file.proxy),
     cacheDir: pick(env.YT_DATA_CACHE_DIR || undefined, file.cacheDir) ?? paths.cache,
     noCache,

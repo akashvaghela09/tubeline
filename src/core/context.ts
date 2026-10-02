@@ -29,7 +29,8 @@ export class AppContext {
 
   /** Options forwarded to every yt-dlp invocation. */
   get ytdlp(): YtDlpOptions {
-    return { proxy: this.config.proxy, cookies: this.config.cookies };
+    const { proxy, cookies, cookiesFromBrowser } = this.config;
+    return { proxy, cookies, cookiesFromBrowser };
   }
 
   innertube(): Promise<InnertubeSource> {
