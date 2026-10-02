@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fetchThumbnail } from "../../src/commands/thumbnail.ts";
 import { CliError } from "../../src/core/errors.ts";
+import { ThumbnailResult } from "../../src/models/results.ts";
 
 const dir = mkdtempSync(join(tmpdir(), "yt-data-thumb-"));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -24,6 +25,7 @@ function fakeFetch(available: string[]) {
 test("best falls back from maxres to the next available size and writes the file", async () => {
   const { fn, seen } = fakeFetch(["sddefault.jpg", "hqdefault.jpg"]);
   const r = await fetchThumbnail(fn, "abcdefghijk", { quality: "best", output: dir });
+  ThumbnailResult.strict().parse(r);
   expect(r).toMatchObject({ quality: "sd", width: 640, height: 480, sizeBytes: 8 });
   expect(readFileSync(join(dir, "abcdefghijk.jpg"), "utf8")).toBe("JPEGDATA");
   expect(seen).toEqual(["GET maxresdefault.jpg", "GET sddefault.jpg"]);

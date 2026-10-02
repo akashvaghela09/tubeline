@@ -2,8 +2,10 @@
 import { Command, CommanderError, Option } from "commander";
 import pkg from "../package.json";
 import { registerChannel } from "./commands/channel.ts";
+import { registerDocs } from "./commands/docs.ts";
 import { registerDoctor } from "./commands/doctor.ts";
 import { registerDownload } from "./commands/download.ts";
+import { registerSchema } from "./commands/schema.ts";
 import { registerThumbnail } from "./commands/thumbnail.ts";
 import { registerTranscript } from "./commands/transcript.ts";
 import { registerUpdate } from "./commands/update.ts";
@@ -58,6 +60,8 @@ registerThumbnail(program, getCtx);
 registerDownload(program, getCtx);
 registerDoctor(program, getCtx);
 registerUpdate(program, getCtx);
+registerSchema(program);
+registerDocs(program);
 
 // `yt-data videos … | head` closes stdout early; that's a normal way to stop, not an error.
 process.stdout.on("error", (err: NodeJS.ErrnoException) => {

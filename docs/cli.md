@@ -1,10 +1,8 @@
 # yt-data — CLI Reference
 
-> This file is also what `yt-data docs` prints, so keep it accurate and example-heavy.
->
-> **Implemented:** `channel`, `video`, `videos`, `transcript`, `thumbnail`, `download`,
-> `update`, `doctor`. Sections marked _(planned)_ are the v1 spec and
-> land per the phases in [`plan.md`](plan.md).
+Agent-friendly CLI for YouTube data. Start here; `yt-data <command> --help` has the same
+options, `yt-data schema <name>` prints JSON Schemas, and `man yt-data` works after
+`yt-data docs --install-man`.
 
 ## Synopsis
 
@@ -217,18 +215,25 @@ table` prints just the checks). Exit 0 when every required check passes, otherwi
 exit code of the first failing required check. yt-dlp and ffmpeg are reported but not
 required, since only `download` and the transcript fallback need them.
 
-### `schema [command]` _(planned)_
+### `schema [name]`
 
-Prints the JSON Schema of a command's output (e.g. `yt-data schema video`). Without an
-argument, lists commands that have schemas.
+JSON Schema (draft 2020-12) of an output shape. Without a name, lists them:
+`channel`, `video`, `videos`, `transcript`, `transcript-list`, `transcript-file`,
+`thumbnail`, `download`, `doctor`, `update`, `error`. `--all` prints every schema keyed by
+name.
 
-### `docs` _(planned)_
+```
+yt-data schema video
+yt-data schema --all > schemas.json
+```
+
+### `docs`
 
 | Option | Description |
 |---|---|
 | (none) | Print this reference as markdown |
-| `--man` | Print the man page (roff) |
-| `--install-man` | Install the man page to `~/.local/share/man/man1/` |
+| `--man` | Print the man page (roff), generated from the command definitions |
+| `--install-man` | Write the man page to `~/.local/share/man/man1/yt-data.1` |
 
 ## Output and errors
 

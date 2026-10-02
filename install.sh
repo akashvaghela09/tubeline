@@ -49,6 +49,12 @@ chmod +x "$tmp/$asset"
 mv "$tmp/$asset" "$INSTALL_DIR/yt-data"
 echo "Installed yt-data to $INSTALL_DIR/yt-data" >&2
 
+# Man page (optional): `man yt-data`.
+MAN_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/man/man1"
+if curl -fsSL "$base/yt-data.1" -o "$tmp/yt-data.1" 2>/dev/null; then
+  mkdir -p "$MAN_DIR" && mv "$tmp/yt-data.1" "$MAN_DIR/yt-data.1" && echo "Installed man page to $MAN_DIR/yt-data.1" >&2
+fi
+
 case ":$PATH:" in
   *":$INSTALL_DIR:"*) ;;
   *) echo "Note: $INSTALL_DIR is not on your PATH." >&2 ;;

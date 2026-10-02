@@ -7,6 +7,9 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 ## [Unreleased]
 
 ### Added
+- `yt-data schema [name]`: JSON Schemas (draft 2020-12) for every output shape.
+- `yt-data docs`: embedded markdown reference; `--man` / `--install-man` man page generated
+  from the command definitions; releases ship `yt-data.1` and `install.sh` installs it.
 - `yt-data download <refs...>`: video/audio downloads via yt-dlp with quality caps,
   mp3/opus/m4a audio, subtitles, thumbnails, custom templates and pass-through args;
   JSON record per file, progress on stderr only at a terminal.

@@ -24,9 +24,14 @@ bun install
 bun run build          # → dist/yt-data
 ```
 
-Optional: `ffmpeg` (needed to merge video+audio for most downloads). yt-dlp is
-used from your system if present, otherwise `yt-data update --yt-dlp` installs a managed
-copy.
+The installer also puts a man page in `~/.local/share/man/man1` (or run
+`yt-data docs --install-man`).
+
+Optional dependencies, only for `download` and the transcript fallback:
+- **yt-dlp** — `yt-data update --yt-dlp` installs a managed copy (or use your own).
+- **ffmpeg** — for downloads above 360p and audio conversion.
+
+Keep everything current with `yt-data update`.
 
 ## Usage
 
@@ -55,11 +60,15 @@ Full reference: [`docs/cli.md`](docs/cli.md).
 
 ## For AI agents
 
-Run `yt-data docs` for the complete reference, or `yt-data <command> --help`.
-Outputs are JSON by default; use `--fields` to keep responses small and
-`yt-data schema <command>` to learn the shape. The CLI never prompts. On failure it exits
-non-zero and writes `{"error":{"code","message","hint"}}` to stderr. Exit codes are
-documented in [`docs/cli.md`](docs/cli.md#output-and-errors).
+- `yt-data docs` prints the complete reference (markdown); `yt-data <command> --help` and
+  `man yt-data` cover the same options.
+- `yt-data schema <name>` prints the JSON Schema of an output (`schema` alone lists them).
+- Output is JSON on stdout (compact when piped); `--fields a,b.c` keeps responses small;
+  `--format ndjson` streams lists.
+- The CLI never prompts. Failures exit non-zero with one JSON line on stderr:
+  `{"error":{"code","message","hint"}}` — see the
+  [exit codes](docs/cli.md#output-and-errors).
+- `yt-data doctor` tells you what's missing or broken.
 
 ## Development
 

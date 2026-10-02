@@ -1,6 +1,6 @@
 # yt-data — Project Plan
 
-Status: **Phase 5 done** (all v1 data commands, `download`, `doctor`, `update`) · Last updated: 2026-10-03
+Status: **Phase 6 done** (all v1 commands, docs, schemas, man page) · Last updated: 2026-10-03
 
 ## 1. Goal
 
@@ -244,8 +244,10 @@ Precedence: flag > env > config file > default.
 ## 10. Agent discoverability
 
 - Exhaustive `--help` on every command, with examples.
-- `man yt-data`: release ships `yt-data.1`; `yt-data docs --man` prints roff, and
-  `yt-data docs --install-man` copies it to `~/.local/share/man/man1/`.
+- `man yt-data`: release ships `yt-data.1` (installed by `install.sh`); `yt-data docs --man`
+  prints roff generated from the commander definitions (so it can't drift), and
+  `yt-data docs --install-man` writes it to `~/.local/share/man/man1/`.
+- `yt-data docs` prints `docs/cli.md`, embedded in the binary at build time.
 - `yt-data docs` prints the full markdown reference (same content as `docs/cli.md`).
 - `yt-data schema <command>` prints JSON Schema for that command's output.
 - Later: `yt-data mcp` — MCP server over stdio exposing the same commands as tools.
@@ -281,7 +283,7 @@ Precedence: flag > env > config file > default.
 | 3 | `transcript` (InnerTube → yt-dlp fallback), `thumbnail` | ✅ |
 | 4 | yt-dlp manager + `download`; `doctor` | ✅ |
 | 5 | `update` (self + yt-dlp), update notices | ✅ (self-update verified at first release) |
-| 6 | Docs: man page, `docs`, `schema`, README polish | `man yt-data` works after install |
+| 6 | Docs: man page, `docs`, `schema`, README polish | ✅ |
 | 7 | CI + release pipeline, `install.sh` | Tagged release installs on Linux/macOS/Windows |
 | Later | search, comments, playlists CRUD, Data API v3 backend, Whisper, MCP server, Playwright fallback | — |
 
