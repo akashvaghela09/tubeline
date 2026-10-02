@@ -1,7 +1,9 @@
 # yt-data — CLI Reference
 
-> Draft spec for v1. Commands are implemented per the phases in [`plan.md`](plan.md).
 > This file is also what `yt-data docs` prints, so keep it accurate and example-heavy.
+>
+> **Implemented:** `channel`, `video`. Sections marked _(planned)_ are the v1 spec and
+> land per the phases in [`plan.md`](plan.md).
 
 ## Synopsis
 
@@ -18,13 +20,12 @@ yt-data <command> [options] [refs...]
 |---|---|---|
 | `-f, --format <fmt>` | `json` | `json`, `ndjson`, `table`, `csv` |
 | `--fields <list>` | all | Comma-separated fields to keep, dot paths allowed (`channel.name`) |
-| `--no-cache` | | Don't read or write the cache |
-| `--refresh` | | Skip cached values but write fresh ones |
+| `--no-cache` | | Don't read or write cached data (currently the InnerTube visitor session) |
+| `--refresh` | | _(planned)_ Skip cached values but write fresh ones |
 | `--cookies <file>` | | Netscape cookies.txt for age-restricted / members-only content |
-| `--cookies-from-browser <name>` | | `chrome`, `firefox`, `brave`, … (passed to yt-dlp) |
+| `--cookies-from-browser <name>` | | _(planned, with `download`)_ `chrome`, `firefox`, … (passed to yt-dlp) |
 | `--proxy <url>` | | HTTP/SOCKS proxy |
-| `--lang <code>` | `en` | Interface language for InnerTube (affects text like "views") |
-| `--region <code>` | `US` | Content region |
+| `--region <code>` | `US` | Content region (2-letter country code) |
 | `-q, --quiet` | | Suppress stderr logs (errors still printed) |
 | `-v, --verbose` | | Debug logs to stderr |
 | `-V, --version` | | Print version |
@@ -34,14 +35,21 @@ yt-data <command> [options] [refs...]
 
 ### `channel <ref...>`
 
-Channel details.
+Channel details. Accepts `@handle`, channel URLs (`/@handle`, `/channel/UC…`, `/c/name`,
+`/user/name`) and `UC…` ids.
+
+Fields: `id`, `handle`, `name`, `description`, `url`, `subscriberCount`,
+`subscriberCountText`, `videoCount`, `viewCount`, `joinedAt` (YYYY-MM-DD), `country`,
+`isVerified`, `isFamilySafe`, `keywords[]`, `links[]{title,url}`, `avatar{url,width,height}`,
+`banner{…}`, `rssUrl`.
 
 ```
 yt-data channel @mkbhd
 yt-data channel https://www.youtube.com/@mkbhd --fields name,subscriberCount,videoCount
+yt-data channel @mkbhd @LinusTechTips --format table --fields name,subscriberCount
 ```
 
-### `videos <ref>`
+### `videos <ref>` _(planned)_
 
 List videos for a channel or playlist.
 
@@ -63,12 +71,23 @@ yt-data videos PLxxxxxxxx --full
 
 Full metadata for one or more videos.
 
+Fields: `id`, `url`, `title`, `description`, `durationSeconds`, `viewCount`, `likeCount`,
+`commentCount` (approximate) + `commentCountText`, `publishedAt` / `uploadedAt` (ISO-8601 UTC),
+`channel{id,name,handle,url,subscriberCount,subscriberCountText,isVerified}`, `category`,
+`keywords[]`, `isLive`, `isLiveContent`, `isUpcoming`, `isUnlisted`, `isFamilySafe`,
+`thumbnails[]{url,width,height}`, `captions[]{lang,name,isAuto,isTranslatable}`,
+`chapters[]{title,startSeconds}`, `playability{status,reason}`.
+
+`playability.status` is `OK` when the video can be played anonymously; `LOGIN_REQUIRED`
+(age-restricted/private) and `UNPLAYABLE` (members-only, region-blocked, …) still return
+metadata.
+
 ```
 yt-data video dQw4w9WgXcQ
 cat ids.txt | yt-data video - --format ndjson
 ```
 
-### `transcript <ref>`
+### `transcript <ref>` _(planned)_
 
 | Option | Default | Description |
 |---|---|---|
@@ -83,7 +102,7 @@ yt-data transcript dQw4w9WgXcQ --as txt
 yt-data transcript dQw4w9WgXcQ --list
 ```
 
-### `thumbnail <ref...>`
+### `thumbnail <ref...>` _(planned)_
 
 | Option | Default | Description |
 |---|---|---|
@@ -91,7 +110,7 @@ yt-data transcript dQw4w9WgXcQ --list
 | `-o, --output <dir>` | `.` | Output directory; files named `<id>.jpg` |
 | `--url-only` | | Print the URL, don't download |
 
-### `download <ref...>`
+### `download <ref...>` _(planned)_
 
 Wraps yt-dlp.
 
@@ -108,7 +127,7 @@ Wraps yt-dlp.
 Prints one JSON object per finished file: `{id, path, format, sizeBytes}`.
 Progress goes to stderr.
 
-### `update`
+### `update` _(planned)_
 
 | Option | Description |
 |---|---|
@@ -120,17 +139,17 @@ Progress goes to stderr.
 A system-installed yt-dlp is never modified; the command prints the right upgrade
 command for how it was installed.
 
-### `doctor`
+### `doctor` _(planned)_
 
 Checks yt-dlp (path, version, managed/system), ffmpeg, network, and runs a tiny request
 against each data source. Exit 0 if everything required is OK.
 
-### `schema [command]`
+### `schema [command]` _(planned)_
 
 Prints the JSON Schema of a command's output (e.g. `yt-data schema video`). Without an
 argument, lists commands that have schemas.
 
-### `docs`
+### `docs` _(planned)_
 
 | Option | Description |
 |---|---|
@@ -141,6 +160,14 @@ argument, lists commands that have schemas.
 ## Output and errors
 
 - Data → stdout. Logs, progress, warnings → stderr.
+- One ref → a JSON object. Several refs (or `-`) → a JSON array, in input order.
+  `--format ndjson` always prints one object per line.
+- JSON is pretty-printed when stdout is a terminal and compact otherwise.
+- Counts are integers. Abbreviated display values ("21.3M") are parsed and approximate;
+  the original text is kept in the matching `…Text` field.
+- With several refs, failures don't stop the others: successful results still go to stdout,
+  each failure is a JSON error line on stderr (with a `ref` field), and the exit code is
+  that of the first failure.
 - Errors → non-zero exit and one JSON line on stderr:
   `{"error":{"code":"NOT_FOUND","message":"Video dQw4w9WgXcX not found","hint":null}}`
 

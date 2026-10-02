@@ -12,7 +12,8 @@ via `youtubei.js`; downloads via a `yt-dlp` subprocess. Plan and roadmap:
 ## Commands
 
 - `bun run dev -- <args>`: run from source
-- `bun test`: unit tests (`YT_DATA_LIVE=1` adds live YouTube tests)
+- `bun test`: unit + contract tests, offline (`YT_DATA_LIVE=1` adds live YouTube tests)
+- `bun run scripts/record-fixtures.ts [scenario]`: re-record InnerTube fixtures
 - `bun run typecheck` / `bun run lint`
 - `bun run build`: compile `dist/yt-data`
 
@@ -25,5 +26,7 @@ via `youtubei.js`; downloads via a `yt-dlp` subprocess. Plan and roadmap:
 - Never add AI co-author trailers or tool attribution to commits, PRs or files.
 - Keep `docs/cli.md` in sync with actual flags. `yt-data docs` prints it.
 - Every new dependency must work under `bun build --compile`.
-- Unit tests use recorded fixtures in `tests/fixtures/`; don't hit the network in
-  unit tests.
+- Tests must not hit the network unless they live in `tests/live/`. New InnerTube behaviour
+  gets a scenario in `tests/helpers/scenarios.ts` plus a recorded fixture.
+- Library objects from youtubei.js are mapped in `src/sources/innertube.ts` only; commands
+  work with our models.

@@ -1,6 +1,6 @@
 # yt-data — Project Plan
 
-Status: **planning / scaffold** · Last updated: 2026-10-02
+Status: **Phase 1 done** (`channel`, `video`) · Last updated: 2026-10-03
 
 ## 1. Goal
 
@@ -85,6 +85,20 @@ docs/
 - dev: `@biomejs/biome`, `typescript`, `bun-types`
 
 Keep the dependency list short; every dependency must survive `bun build --compile`.
+
+### InnerTube notes (learned in Phase 1)
+
+- The session is created **without** the player script (`retrieve_player: false`), saving
+  ~1 s per run; the visitor session is cached in `$CACHE/innertube/` and refreshed after 3 days.
+- Interface language is pinned to `hl=en` so display strings parse reliably; `--region`
+  sets `gl`.
+- `video` = WEB `/player` + `/next` (metadata, likes, comment count, chapters) in parallel
+  with ANDROID `/player` (caption tracks and the real playability status — WEB without a
+  player script always reports `UNPLAYABLE` and omits captions).
+- Channel = `/browse` (header, metadata) + about panel continuation (exact counts, join
+  date, country, links). Channel tab listings now use `LockupView` items (relevant to Phase 2).
+- youtubei.js logs parser drift to the console; it is silenced and failures are mapped to
+  typed errors instead.
 
 ## 4. Command surface (v1)
 
@@ -231,7 +245,12 @@ Precedence: flag > env > config file > default.
 
 ## 11. Testing
 
-- Unit tests on parsers and resolvers with recorded, sanitised InnerTube fixtures.
+- Unit tests on parsers, resolvers, output, config, HTTP retry and CLI error paths.
+- Contract tests replay recorded InnerTube traffic (`tests/fixtures/innertube/*.json.gz`)
+  through the real mapping code and validate results against the zod models (strict).
+  Requests are matched on resource identity (endpoint, client, videoId/browseId/…), not
+  volatile session fields. Re-record with `bun run scripts/record-fixtures.ts [scenario]`;
+  scenarios live in `tests/helpers/scenarios.ts` and are shared with the live tests.
 - Output-contract tests: every command's JSON validates against its zod schema.
 - Live tests behind `YT_DATA_LIVE=1`, run nightly in CI to catch YouTube changes early.
 - Smoke test the compiled binary in CI on each OS.
@@ -249,7 +268,7 @@ Precedence: flag > env > config file > default.
 | Phase | Scope | Done when |
 |---|---|---|
 | 0 | Scaffold: repo files, tooling, plan | ✅ |
-| 1 | Core: `resolve`, `output`, `errors`, `config`, `http`; `channel`, `video` | JSON for a real channel + video, contract tests pass |
+| 1 | Core: `resolve`, `output`, `errors`, `config`, `http`; `channel`, `video` | ✅ |
 | 2 | `videos` (pagination, `--limit`, `--type`, `--full`), cache | Lists a 1k-video channel via NDJSON |
 | 3 | `transcript` (InnerTube → yt-dlp fallback), `thumbnail` | txt/vtt/srt/json output |
 | 4 | yt-dlp manager + `download`; `doctor` | Downloads 1080p + audio-only; doctor reports all deps |

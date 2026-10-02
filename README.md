@@ -10,8 +10,8 @@ video metadata, transcripts, thumbnails and video/audio downloads.
   `--fields` projection, NDJSON streaming, JSON Schemas for every output, man page.
 - **Single binary**, no runtime needed. Self-updating.
 
-> **Status:** early development. The command surface below is the v1 target; see
-> [`docs/plan.md`](docs/plan.md) for the roadmap.
+> **Status:** early development. `channel` and `video` work today; the other commands
+> below are the v1 target — see [`docs/plan.md`](docs/plan.md) for the roadmap.
 
 ## Install
 
