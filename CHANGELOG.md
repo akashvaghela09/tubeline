@@ -6,6 +6,8 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-03
+
 ### Added
 - `yt-data schema [name]`: JSON Schemas (draft 2020-12) for every output shape.
 - `yt-data docs`: embedded markdown reference; `--man` / `--install-man` man page generated
@@ -38,3 +40,6 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 - Offline contract tests from recorded InnerTube fixtures; opt-in live tests.
 - Project scaffold: README, plan, CLI spec, release guide, MIT license.
 - Tooling: Bun, TypeScript, Biome; CI, nightly live-test and release workflows; `install.sh`.
+
+[Unreleased]: https://github.com/akashvaghela09/yt-data/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/akashvaghela09/yt-data/releases/tag/v0.1.0
