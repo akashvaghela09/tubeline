@@ -7,6 +7,8 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 ## [Unreleased]
 
 ### Fixed
+- `transcript` reported "has no captions" (exit 3) when YouTube had actually bot-checked
+  or age-gated the request; it now exits 4 / 5 with the reason.
 - The daily update notice now also appears after commands that don't contact YouTube
   (`schema`, `docs`).
 

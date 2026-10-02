@@ -192,15 +192,7 @@ export class InnertubeSource {
     } catch (err) {
       throw mapLibraryError(err, `Video ${id} not found`);
     }
-    return (android.captions?.caption_tracks ?? [])
-      .filter((c: Loose) => c.base_url && c.language_code)
-      .map((c: Loose) => ({
-        lang: c.language_code,
-        name: c.name?.text ?? c.language_code,
-        isAuto: c.kind === "asr",
-        isTranslatable: !!c.is_translatable,
-        baseUrl: c.base_url,
-      }));
+    return captionTracksFrom(id, android);
   }
 
   /**
@@ -303,6 +295,38 @@ export class InnertubeSource {
       throw mapLibraryError(err, `Playlist ${id} not found`);
     }
   }
+}
+
+/**
+ * Caption tracks from a player response. An empty list only means "no captions" when the
+ * player said OK; otherwise it's a block (bot check, age gate, …) and is reported as such.
+ */
+export function captionTracksFrom(id: string, player: Loose): CaptionTrackRef[] {
+  const tracks: CaptionTrackRef[] = (player?.captions?.caption_tracks ?? [])
+    .filter((c: Loose) => c.base_url && c.language_code)
+    .map((c: Loose) => ({
+      lang: c.language_code,
+      name: c.name?.text ?? c.language_code,
+      isAuto: c.kind === "asr",
+      isTranslatable: !!c.is_translatable,
+      baseUrl: c.base_url,
+    }));
+  const status: string = player?.playability_status?.status ?? "OK";
+  if (tracks.length || status === "OK") return tracks;
+  const reason: string = player?.playability_status?.reason || status;
+  if (/not a bot/i.test(reason)) {
+    throw new CliError(
+      "RATE_LIMITED",
+      `YouTube bot check: ${reason}`,
+      "Use --cookies or --proxy, or retry later",
+    );
+  }
+  if (status === "ERROR") throw new CliError("NOT_FOUND", `Video ${id} not found: ${reason}`);
+  throw new CliError(
+    "UNAVAILABLE",
+    `Video ${id} captions unavailable: ${reason}`,
+    "Pass --cookies from a logged-in session",
+  );
 }
 
 const VIEWS = /^(?:no|\d[\d,.]*\s*[KMB]?)(?:\s+views?)?$/i;
