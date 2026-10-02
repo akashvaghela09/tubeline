@@ -32,7 +32,19 @@ describe.skipIf(!live)("live InnerTube", () => {
         expect(err).toBeInstanceOf(CliError);
         expect((err as CliError).code).toBe(want.error);
       } else {
-        want.schema?.strict().parse(await scenario.run(source));
+        let result: unknown;
+        try {
+          result = await scenario.run(source);
+        } catch (err) {
+          // Datacenter IPs (CI runners) regularly get bot-checked; that says nothing about
+          // whether our parsing still works, so report it instead of failing.
+          if (err instanceof CliError && err.code === "RATE_LIMITED") {
+            console.warn(`${scenario.name}: inconclusive, ${err.message}`);
+            return;
+          }
+          throw err;
+        }
+        want.schema?.strict().parse(result);
       }
     }, 30_000);
   }
