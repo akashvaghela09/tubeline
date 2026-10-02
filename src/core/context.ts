@@ -1,21 +1,35 @@
-// Per-invocation state shared by commands: effective config and a lazily created client.
-
+// Per-invocation state shared by commands: effective config, HTTP, cache and a lazily
+// created InnerTube client.
 import { join } from "node:path";
 import pkg from "../../package.json";
 import { createInnertube, InnertubeSource } from "../sources/innertube.ts";
+import type { YtDlpOptions } from "../sources/ytdlp.ts";
 import { ResponseCache } from "./cache.ts";
 import { type Config, type GlobalFlags, loadConfig } from "./config.ts";
 import { loadCookieHeader } from "./cookies.ts";
-import { createFetch } from "./http.ts";
+import { createFetch, type FetchFn } from "./http.ts";
 import { setLogLevel } from "./log.ts";
 
 export class AppContext {
   readonly config: Config;
+  readonly fetch: FetchFn;
+  readonly cache: ResponseCache;
   private source?: Promise<InnertubeSource>;
 
   constructor(flags: GlobalFlags, env: NodeJS.ProcessEnv = process.env) {
     this.config = loadConfig(flags, env);
     setLogLevel(this.config.logLevel);
+    this.fetch = createFetch({ proxy: this.config.proxy });
+    this.cache = new ResponseCache(
+      join(this.config.cacheDir, "responses"),
+      this.config.cacheMode,
+      pkg.version,
+    );
+  }
+
+  /** Options forwarded to every yt-dlp invocation. */
+  get ytdlp(): YtDlpOptions {
+    return { proxy: this.config.proxy, cookies: this.config.cookies };
   }
 
   innertube(): Promise<InnertubeSource> {
@@ -23,16 +37,11 @@ export class AppContext {
       const { config } = this;
       const yt = await createInnertube({
         region: config.region,
-        fetch: createFetch({ proxy: config.proxy }),
+        fetch: this.fetch,
         cookie: config.cookies ? loadCookieHeader(config.cookies) : undefined,
         cacheDir: config.noCache ? undefined : config.cacheDir,
       });
-      const cache = new ResponseCache(
-        join(config.cacheDir, "responses"),
-        config.cacheMode,
-        pkg.version,
-      );
-      return new InnertubeSource(yt, cache);
+      return new InnertubeSource(yt, this.cache);
     })();
     return this.source;
   }

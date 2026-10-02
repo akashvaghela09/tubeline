@@ -7,6 +7,9 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 ## [Unreleased]
 
 ### Added
+- `yt-data transcript <refs...>`: captions as json / txt / vtt / srt, language and
+  manual/auto selection, `--list`, `--timestamps`, `-o` file or directory, yt-dlp fallback.
+- `yt-data thumbnail <refs...>`: best-available thumbnail download or `--url-only`.
 - `yt-data videos <ref>`: list a channel's videos / shorts / streams / all uploads, or a
   playlist, with pagination, `--limit`, `--sort newest|popular|oldest`, `--since`, `--full`
   (full metadata per video) and NDJSON streaming.

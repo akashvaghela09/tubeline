@@ -48,6 +48,11 @@ describe("cli", () => {
     [["videos", "@x", "--type", "reels"], "reels"],
     [["videos", "@x", "--type", "shorts", "--since", "30d"], "no dates"],
     [["videos", "@x", "--sort", "popular", "--since", "30d"], "newest-first"],
+    [["transcript", "@mkbhd"], "not a video"],
+    [["transcript", "dQw4w9WgXcQ", "e1q-TuHdc4Y", "--as", "txt"], "needs -o"],
+    [["transcript", "dQw4w9WgXcQ", "--as", "pdf"], "pdf"],
+    [["thumbnail", "@mkbhd", "--url-only"], "not a video"],
+    [["thumbnail", "dQw4w9WgXcQ", "--quality", "huge"], "huge"],
   ])("usage error %p → exit 2 + JSON on stderr", async (args, fragment) => {
     const r = await run(...args);
     expect(r.code).toBe(2);

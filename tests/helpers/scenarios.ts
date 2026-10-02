@@ -1,10 +1,13 @@
 // Fixture scenarios shared by the recorder, contract tests and live tests.
+import { ResponseCache } from "../../src/core/cache.ts";
+import type { FetchFn } from "../../src/core/http.ts";
 import { parseRef } from "../../src/core/resolve.ts";
+import { getTranscript } from "../../src/services/transcript.ts";
 import type { InnertubeSource, ListSort, ListType } from "../../src/sources/innertube.ts";
 
 export interface Scenario {
   name: string;
-  run: (source: InnertubeSource) => Promise<unknown>;
+  run: (source: InnertubeSource, fetch: FetchFn) => Promise<unknown>;
 }
 
 async function take(
@@ -21,6 +24,17 @@ async function take(
   }
   return out;
 }
+
+const transcript = (
+  source: InnertubeSource,
+  fetch: FetchFn,
+  id: string,
+  opts: { lang?: string; prefer?: "manual" | "auto" } = {},
+) =>
+  getTranscript({ source, fetch, cache: ResponseCache.disabled(), ytdlp: false }, id, {
+    prefer: "manual",
+    ...opts,
+  });
 
 export const SCENARIOS: Scenario[] = [
   { name: "channel-mkbhd", run: (s) => s.getChannel(parseRef("@mkbhd")) },
@@ -40,4 +54,11 @@ export const SCENARIOS: Scenario[] = [
   { name: "list-popular", run: (s) => take(s, "@mkbhd", 5, "videos", "popular") },
   { name: "list-all", run: (s) => take(s, "@mkbhd", 5, "all") },
   { name: "list-playlist", run: (s) => take(s, "PLBsP89CPrMeO7uztAu6YxSB10cRMpjgiY", 100) },
+  { name: "transcript-manual", run: (s, f) => transcript(s, f, "dQw4w9WgXcQ") },
+  { name: "transcript-auto", run: (s, f) => transcript(s, f, "e1q-TuHdc4Y", { prefer: "auto" }) },
+  { name: "transcript-other-lang", run: (s, f) => transcript(s, f, "e1q-TuHdc4Y", { lang: "ja" }) },
+  {
+    name: "transcript-missing-lang",
+    run: (s, f) => transcript(s, f, "e1q-TuHdc4Y", { lang: "de" }),
+  },
 ];

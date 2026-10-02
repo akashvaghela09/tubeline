@@ -69,6 +69,14 @@ function expireSession(dir: string) {
   } catch {}
 }
 
+export interface CaptionTrackRef {
+  lang: string;
+  name: string;
+  isAuto: boolean;
+  isTranslatable: boolean;
+  baseUrl: string;
+}
+
 export const LIST_TYPES = ["videos", "shorts", "streams", "all"] as const;
 export type ListType = (typeof LIST_TYPES)[number];
 export const LIST_SORTS = ["newest", "popular", "oldest"] as const;
@@ -174,6 +182,25 @@ export class InnertubeSource {
     }
     this.cache.set("video", id, video);
     return video;
+  }
+
+  /** Caption tracks with their timedtext URLs (ANDROID client; WEB omits them anonymously). */
+  async getCaptionTracks(id: string): Promise<CaptionTrackRef[]> {
+    let android: Loose;
+    try {
+      android = await this.yt.getBasicInfo(id, { client: "ANDROID" });
+    } catch (err) {
+      throw mapLibraryError(err, `Video ${id} not found`);
+    }
+    return (android.captions?.caption_tracks ?? [])
+      .filter((c: Loose) => c.base_url && c.language_code)
+      .map((c: Loose) => ({
+        lang: c.language_code,
+        name: c.name?.text ?? c.language_code,
+        isAuto: c.kind === "asr",
+        isTranslatable: !!c.is_translatable,
+        baseUrl: c.base_url,
+      }));
   }
 
   /**

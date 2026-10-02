@@ -11,10 +11,11 @@ const only = new Set(process.argv.slice(2));
 for (const scenario of SCENARIOS) {
   if (only.size && !only.has(scenario.name)) continue;
   const entries: Entry[] = [];
-  const yt = await createInnertube({ region: "US", fetch: recordingFetch(entries) });
+  const fetch = recordingFetch(entries);
+  const yt = await createInnertube({ region: "US", fetch });
   let outcome = "ok";
   try {
-    await scenario.run(new InnertubeSource(yt));
+    await scenario.run(new InnertubeSource(yt), fetch);
   } catch (err) {
     outcome = `error (${(err as Error).message})`;
   }

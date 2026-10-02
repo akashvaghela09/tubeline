@@ -4,7 +4,7 @@ import { z } from "zod";
 import { CliError, type ErrorCode } from "../../src/core/errors.ts";
 import { createFetch } from "../../src/core/http.ts";
 import { Channel } from "../../src/models/channel.ts";
-import { Video, VideoSummary } from "../../src/models/video.ts";
+import { Transcript, Video, VideoSummary } from "../../src/models/video.ts";
 import { createInnertube, InnertubeSource } from "../../src/sources/innertube.ts";
 import { SCENARIOS } from "../helpers/scenarios.ts";
 
@@ -26,24 +26,27 @@ const EXPECT: Record<string, { schema?: z.ZodType; error?: ErrorCode }> = {
   "list-popular": { schema: List },
   "list-all": { schema: List },
   "list-playlist": { schema: List },
+  "transcript-manual": { schema: Transcript.strict() },
+  "transcript-auto": { schema: Transcript.strict() },
+  "transcript-other-lang": { schema: Transcript.strict() },
+  "transcript-missing-lang": { error: "NOT_FOUND" },
 };
 
 describe.skipIf(!live)("live InnerTube", () => {
   for (const scenario of SCENARIOS) {
     test(scenario.name, async () => {
-      const source = new InnertubeSource(
-        await createInnertube({ region: "US", fetch: createFetch() }),
-      );
+      const fetch = createFetch();
+      const source = new InnertubeSource(await createInnertube({ region: "US", fetch }));
       const want = EXPECT[scenario.name];
       if (!want) throw new Error(`no expectation for ${scenario.name}`);
       if (want.error) {
-        const err = await scenario.run(source).catch((e) => e);
+        const err = await scenario.run(source, fetch).catch((e) => e);
         expect(err).toBeInstanceOf(CliError);
         expect((err as CliError).code).toBe(want.error);
       } else {
         let result: unknown;
         try {
-          result = await scenario.run(source);
+          result = await scenario.run(source, fetch);
         } catch (err) {
           // Datacenter IPs (CI runners) regularly get bot-checked; that says nothing about
           // whether our parsing still works, so report it instead of failing.

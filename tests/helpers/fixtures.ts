@@ -31,7 +31,13 @@ export async function requestKey(
   }
   const client = (body.context as { client?: { clientName?: string } } | undefined)?.client
     ?.clientName;
+  const q = url.searchParams;
   const ident = {
+    // timedtext (captions) GETs are identified by their query string.
+    v: q.get("v") ?? undefined,
+    lang: q.get("lang") ?? undefined,
+    kind: q.get("kind") ?? undefined,
+    tlang: q.get("tlang") ?? undefined,
     client,
     videoId: body.videoId,
     browseId: body.browseId,
@@ -84,10 +90,17 @@ export function saveFixture(name: string, entries: Entry[]) {
   );
 }
 
-/** A source wired to replay a recorded fixture. */
+/** A source (and the fetch behind it) wired to replay a recorded fixture. */
+export async function replayDeps(
+  name: string,
+): Promise<{ source: InnertubeSource; fetch: FetchFn }> {
+  const fetch = replayFetch(loadFixture(name));
+  const yt = await createInnertube({ region: "US", fetch });
+  return { source: new InnertubeSource(yt), fetch };
+}
+
 export async function replaySource(name: string): Promise<InnertubeSource> {
-  const yt = await createInnertube({ region: "US", fetch: replayFetch(loadFixture(name)) });
-  return new InnertubeSource(yt);
+  return (await replayDeps(name)).source;
 }
 
 export type { Entry };

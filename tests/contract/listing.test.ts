@@ -2,7 +2,7 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { VideoSummary } from "../../src/models/video.ts";
-import { replaySource } from "../helpers/fixtures.ts";
+import { replayDeps } from "../helpers/fixtures.ts";
 import { SCENARIOS } from "../helpers/scenarios.ts";
 
 const List = z.array(VideoSummary.strict());
@@ -10,7 +10,8 @@ const List = z.array(VideoSummary.strict());
 async function run(name: string) {
   const scenario = SCENARIOS.find((s) => s.name === name);
   if (!scenario) throw new Error(`unknown scenario ${name}`);
-  return List.parse(await scenario.run(await replaySource(name)));
+  const { source, fetch } = await replayDeps(name);
+  return List.parse(await scenario.run(source, fetch));
 }
 
 describe("videos listing", () => {

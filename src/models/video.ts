@@ -92,3 +92,23 @@ export const VideoSummary = z
   })
   .describe("Video as it appears in a channel or playlist listing (use --full for full metadata)");
 export type VideoSummary = z.infer<typeof VideoSummary>;
+
+export const TranscriptSegment = z.object({
+  start: z.number().describe("Seconds from the start of the video"),
+  duration: z.number().describe("Seconds"),
+  text: z.string(),
+});
+
+export const Transcript = z
+  .object({
+    videoId: z.string(),
+    lang: z.string(),
+    name: z.string().nullable().describe('Track name, e.g. "English (auto-generated)"'),
+    isAuto: z.boolean().describe("Auto-generated (speech recognition)"),
+    isTranslated: z.boolean().describe("Machine-translated from another track"),
+    source: z.enum(["innertube", "yt-dlp"]),
+    segments: z.array(TranscriptSegment),
+  })
+  .describe("Timed transcript of a video");
+export type Transcript = z.infer<typeof Transcript>;
+export type TranscriptSegment = z.infer<typeof TranscriptSegment>;

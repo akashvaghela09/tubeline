@@ -1,6 +1,6 @@
 # yt-data — Project Plan
 
-Status: **Phase 2 done** (`channel`, `video`, `videos`) · Last updated: 2026-10-03
+Status: **Phase 3 done** (`channel`, `video`, `videos`, `transcript`, `thumbnail`) · Last updated: 2026-10-03
 
 ## 1. Goal
 
@@ -101,6 +101,10 @@ Keep the dependency list short; every dependency must survive `bun build --compi
   page, with compact text ("4.7M", "2d ago"). Sort chips are labelled Latest / Popular /
   Oldest. `--type all` uses the uploads playlist `UU<channel id minus UC>` (100 per page),
   which has no sort chips. Shorts items carry no date or duration.
+- Transcripts: `/get_transcript` answers 400 without extra tokens, but the ANDROID
+  player's caption `baseUrl`s fetch fine anonymously as srv3 XML (`<p t d>`, auto tracks
+  with `<s>` word spans). Machine translation (`&tlang=`) gets HTTP 429 anonymously, both
+  directly and through yt-dlp, so it's best-effort.
 - youtubei.js logs parser drift to the console; it is silenced and failures are mapped to
   typed errors instead.
 
@@ -274,7 +278,7 @@ Precedence: flag > env > config file > default.
 | 0 | Scaffold: repo files, tooling, plan | ✅ |
 | 1 | Core: `resolve`, `output`, `errors`, `config`, `http`; `channel`, `video` | ✅ |
 | 2 | `videos` (pagination, `--limit`, `--type`, `--full`), cache | ✅ |
-| 3 | `transcript` (InnerTube → yt-dlp fallback), `thumbnail` | txt/vtt/srt/json output |
+| 3 | `transcript` (InnerTube → yt-dlp fallback), `thumbnail` | ✅ |
 | 4 | yt-dlp manager + `download`; `doctor` | Downloads 1080p + audio-only; doctor reports all deps |
 | 5 | `update` (self + yt-dlp), update notices | Updates from a real GitHub Release |
 | 6 | Docs: man page, `docs`, `schema`, README polish | `man yt-data` works after install |

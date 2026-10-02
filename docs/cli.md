@@ -2,7 +2,7 @@
 
 > This file is also what `yt-data docs` prints, so keep it accurate and example-heavy.
 >
-> **Implemented:** `channel`, `video`, `videos`. Sections marked _(planned)_ are the v1 spec and
+> **Implemented:** `channel`, `video`, `videos`, `transcript`, `thumbnail`. Sections marked _(planned)_ are the v1 spec and
 > land per the phases in [`plan.md`](plan.md).
 
 ## Synopsis
@@ -105,28 +105,52 @@ yt-data video dQw4w9WgXcQ
 cat ids.txt | yt-data video - --format ndjson
 ```
 
-### `transcript <ref>` _(planned)_
+### `transcript <refs...>`
+
+Transcript from a video's captions. Source order: the InnerTube caption track, then
+yt-dlp (used when InnerTube fails, or when the language only exists as a YouTube machine
+translation).
 
 | Option | Default | Description |
 |---|---|---|
-| `-l, --lang <code>` | `en` | Preferred caption language; falls back to auto-generated, then first available |
-| `--prefer <p>` | `manual` | `manual` or `auto` |
+| `-l, --lang <code>` | English if available, else the first track | Caption language (`en`, `pt-BR`, …; base language matches, e.g. `en` → `en-US`) |
+| `--prefer <p>` | `manual` | `manual` or `auto` (auto-generated) when both exist |
 | `--as <fmt>` | `json` | `json`, `txt`, `vtt`, `srt` |
-| `--list` | | List available caption tracks instead |
-| `-o, --output <path>` | stdout | Write to a file |
+| `--timestamps` | | Prefix each `txt` line with `[mm:ss]` |
+| `--list` | | List caption tracks: `{videoId, tracks[{lang,name,isAuto,isTranslatable}]}` |
+| `-o, --output <path>` | stdout | File (one ref) or directory (several refs → `<id>.<lang>.<ext>`) |
+| `--no-fallback` | | Don't fall back to yt-dlp |
+
+JSON: `{videoId, lang, name, isAuto, isTranslated, source, segments[{start, duration, text}]}`
+(times in seconds). With `-o`, stdout gets `{videoId, lang, path}` per file written.
+`txt`/`vtt`/`srt` to stdout take a single video; use `-o <dir>` for several.
+
+Machine-translated languages (a `--lang` with no native track) are best-effort: YouTube
+often answers anonymous translation requests with HTTP 429 (exit 4); `--cookies` helps.
 
 ```
 yt-data transcript dQw4w9WgXcQ --as txt
+yt-data transcript dQw4w9WgXcQ --as txt --timestamps
+yt-data transcript e1q-TuHdc4Y --lang ja --as srt -o talk.ja.srt
 yt-data transcript dQw4w9WgXcQ --list
+yt-data videos @mkbhd -n 5 -f ndjson --fields id | jq -r .id | yt-data transcript - --as txt -o ./transcripts
 ```
 
-### `thumbnail <ref...>` _(planned)_
+### `thumbnail <refs...>`
 
 | Option | Default | Description |
 |---|---|---|
-| `--quality <q>` | `best` | `best`, `maxres`, `sd`, `hq`, `mq`, `default` (falls back if missing) |
+| `--quality <q>` | `best` | `best`, `maxres` (1280×720), `sd` (640×480), `hq` (480×360), `mq` (320×180), `default` (120×90); falls back to the next smaller size if missing |
 | `-o, --output <dir>` | `.` | Output directory; files named `<id>.jpg` |
 | `--url-only` | | Print the URL, don't download |
+
+Output: `{id, quality, url, width, height, path, sizeBytes}` (`path`/`sizeBytes` are null with
+`--url-only`).
+
+```
+yt-data thumbnail dQw4w9WgXcQ -o ./thumbs
+yt-data thumbnail dQw4w9WgXcQ --quality hq --url-only --fields url
+```
 
 ### `download <ref...>` _(planned)_
 
