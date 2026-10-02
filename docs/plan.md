@@ -1,6 +1,6 @@
 # yt-data — Project Plan
 
-Status: **Phase 6 done** (all v1 commands, docs, schemas, man page) · Last updated: 2026-10-03
+Status: **v0.1.0 released** — phases 0–7 done · Last updated: 2026-10-03
 
 ## 1. Goal
 
@@ -282,9 +282,9 @@ Precedence: flag > env > config file > default.
 | 2 | `videos` (pagination, `--limit`, `--type`, `--full`), cache | ✅ |
 | 3 | `transcript` (InnerTube → yt-dlp fallback), `thumbnail` | ✅ |
 | 4 | yt-dlp manager + `download`; `doctor` | ✅ |
-| 5 | `update` (self + yt-dlp), update notices | ✅ (self-update verified at first release) |
+| 5 | `update` (self + yt-dlp), update notices | ✅ |
 | 6 | Docs: man page, `docs`, `schema`, README polish | ✅ |
-| 7 | CI + release pipeline, `install.sh` | Tagged release installs on Linux/macOS/Windows |
+| 7 | CI + release pipeline, `install.sh` | ✅ v0.1.0 (install.sh + self-update verified on Linux) |
 | Later | search, comments, playlists CRUD, Data API v3 backend, Whisper, MCP server, Playwright fallback | — |
 
 ## 14. Risks

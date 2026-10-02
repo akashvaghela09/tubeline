@@ -84,8 +84,15 @@ try {
 }
 
 async function maybeNotifyUpdate() {
-  if (!ctx || !shouldCheck(ctx.config, !!process.stderr.isTTY, program.args[0])) return;
-  const notice = await updateNotice(ctx.config, ctx.fetch);
+  if (!process.stderr.isTTY) return;
+  let app: AppContext;
+  try {
+    app = getCtx(); // commands like `schema` never needed one
+  } catch {
+    return;
+  }
+  if (!shouldCheck(app.config, true, program.args[0])) return;
+  const notice = await updateNotice(app.config, app.fetch);
   if (notice) process.stderr.write(`${notice}\n`);
 }
 

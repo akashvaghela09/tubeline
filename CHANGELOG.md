@@ -6,6 +6,10 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 
 ## [Unreleased]
 
+### Fixed
+- The daily update notice now also appears after commands that don't contact YouTube
+  (`schema`, `docs`).
+
 ## [0.1.0] - 2026-10-03
 
 ### Added
