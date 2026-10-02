@@ -42,6 +42,10 @@ describe.skipIf(!live)("live InnerTube", () => {
       if (want.error) {
         const err = await scenario.run(source, fetch).catch((e) => e);
         expect(err).toBeInstanceOf(CliError);
+        if ((err as CliError).code === "RATE_LIMITED" && want.error !== "RATE_LIMITED") {
+          console.warn(`${scenario.name}: inconclusive, ${(err as CliError).message}`);
+          return;
+        }
         expect((err as CliError).code).toBe(want.error);
       } else {
         let result: unknown;
