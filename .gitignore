@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Bun
+.bun/
+
+# Downloaded media / scratch output from local runs
+downloads/
+output/
+*.mp4
+*.mkv
+*.webm
+*.m4a
+*.mp3
+*.opus
+*.vtt
+*.srt
+
+# Local test fixtures recorded from live YouTube (re-record, don't commit raw dumps)
+tests/fixtures/live/
+
+# Secrets & local config
+.env
+.env.*
+!.env.example
+cookies.txt
+*.cookies.txt
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
