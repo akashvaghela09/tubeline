@@ -98,3 +98,50 @@ export function parseDescriptionChapters(description: string | null | undefined)
   if (chapters.length < 3 || chapters[0]?.startSeconds !== 0) return [];
   return chapters;
 }
+
+const AGE_UNITS: Record<string, number> = {
+  s: 1,
+  sec: 1,
+  second: 1,
+  m: 60,
+  min: 60,
+  minute: 60,
+  h: 3600,
+  hr: 3600,
+  hour: 3600,
+  d: 86400,
+  day: 86400,
+  w: 7 * 86400,
+  wk: 7 * 86400,
+  week: 7 * 86400,
+  mo: 30 * 86400,
+  month: 30 * 86400,
+  y: 365 * 86400,
+  yr: 365 * 86400,
+  year: 365 * 86400,
+};
+
+/**
+ * "2d ago", "Streamed 8y ago", "3 weeks ago" → approximate ISO timestamp. Listings only
+ * expose relative ages, so the result is accurate to about one unit of the given age.
+ */
+export function parseRelativeAge(text: string | null | undefined, now = Date.now()): string | null {
+  if (!text) return null;
+  const m = text.match(/(\d+)\s*([a-z]+?)s?\s+ago\b/i);
+  if (!m) return null;
+  const unit = AGE_UNITS[(m[2] as string).toLowerCase()];
+  if (!unit) return null;
+  return new Date(now - Number(m[1]) * unit * 1000).toISOString();
+}
+
+/** --since value: ISO date/datetime, or a relative span like 30d, 12w, 6mo, 1y. */
+export function parseSince(value: string, now = Date.now()): Date | null {
+  const rel = value.trim().match(/^(\d+)\s*(d|w|mo|y)$/i);
+  if (rel) {
+    const unit = AGE_UNITS[(rel[2] as string).toLowerCase()] as number;
+    return new Date(now - Number(rel[1]) * unit * 1000);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}/.test(value.trim())) return null;
+  const d = new Date(value.trim());
+  return Number.isNaN(d.getTime()) ? null : d;
+}

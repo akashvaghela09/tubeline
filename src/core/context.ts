@@ -1,6 +1,9 @@
 // Per-invocation state shared by commands: effective config and a lazily created client.
 
+import { join } from "node:path";
+import pkg from "../../package.json";
 import { createInnertube, InnertubeSource } from "../sources/innertube.ts";
+import { ResponseCache } from "./cache.ts";
 import { type Config, type GlobalFlags, loadConfig } from "./config.ts";
 import { loadCookieHeader } from "./cookies.ts";
 import { createFetch } from "./http.ts";
@@ -24,7 +27,12 @@ export class AppContext {
         cookie: config.cookies ? loadCookieHeader(config.cookies) : undefined,
         cacheDir: config.noCache ? undefined : config.cacheDir,
       });
-      return new InnertubeSource(yt);
+      const cache = new ResponseCache(
+        join(config.cacheDir, "responses"),
+        config.cacheMode,
+        pkg.version,
+      );
+      return new InnertubeSource(yt, cache);
     })();
     return this.source;
   }

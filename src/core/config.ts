@@ -2,6 +2,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
+import type { CacheMode } from "./cache.ts";
 import { CliError } from "./errors.ts";
 import type { LogLevel } from "./log.ts";
 import { appPaths } from "./paths.ts";
@@ -32,6 +33,7 @@ export interface Config {
   proxy?: string;
   cacheDir: string;
   noCache: boolean;
+  cacheMode: CacheMode;
   updateCheck: boolean;
   logLevel: LogLevel;
 }
@@ -43,6 +45,7 @@ export interface GlobalFlags {
   cookies?: string;
   proxy?: string;
   cache?: boolean; // commander maps --no-cache to cache=false
+  refresh?: boolean;
   quiet?: boolean;
   verbose?: boolean;
 }
@@ -99,15 +102,18 @@ export function loadConfig(flags: GlobalFlags = {}, env: NodeJS.ProcessEnv = pro
     );
   }
 
+  const noCache =
+    pick(flags.cache === false ? true : undefined, envBool(env.YT_DATA_NO_CACHE), file.noCache) ??
+    false;
+
   return {
     format: format as Format,
     region,
     cookies: pick(flags.cookies, env.YT_DATA_COOKIES || undefined, file.cookies),
     proxy: pick(flags.proxy, env.YT_DATA_PROXY || undefined, file.proxy),
     cacheDir: pick(env.YT_DATA_CACHE_DIR || undefined, file.cacheDir) ?? paths.cache,
-    noCache:
-      pick(flags.cache === false ? true : undefined, envBool(env.YT_DATA_NO_CACHE), file.noCache) ??
-      false,
+    noCache,
+    cacheMode: noCache ? "off" : flags.refresh ? "refresh" : "normal",
     updateCheck: pick(invert(envBool(env.YT_DATA_NO_UPDATE_CHECK)), file.updateCheck) ?? true,
     logLevel: pick(flagLog, envLog, file.logLevel) ?? "warn",
   };

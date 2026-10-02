@@ -152,3 +152,23 @@ function toTable(rows: Json[]): string {
       .trimEnd();
   return `${[line(cols), line(widths.map((w) => "-".repeat(w))), ...cells.map(line)].join("\n")}\n`;
 }
+
+/**
+ * Incremental writer for list commands: NDJSON lines are written as items arrive; the other
+ * formats need the full set (array brackets, column widths) and are written on end().
+ */
+export function createListWriter(
+  opts: RenderOptions,
+  out: (s: string) => void = (s) => process.stdout.write(s),
+) {
+  const buffered: Json[] = [];
+  return {
+    write(item: Json) {
+      if (opts.format === "ndjson") out(render([item], { ...opts, single: false }));
+      else buffered.push(item);
+    },
+    end() {
+      if (opts.format !== "ndjson") out(render(buffered, { ...opts, single: false }));
+    },
+  };
+}

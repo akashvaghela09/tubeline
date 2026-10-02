@@ -3,6 +3,7 @@ import { Command, CommanderError, Option } from "commander";
 import pkg from "../package.json";
 import { registerChannel } from "./commands/channel.ts";
 import { registerVideo } from "./commands/video.ts";
+import { registerVideos } from "./commands/videos.ts";
 import { FORMATS, type GlobalFlags } from "./core/config.ts";
 import { AppContext } from "./core/context.ts";
 import { CliError, toCliError } from "./core/errors.ts";
@@ -16,7 +17,8 @@ const program = new Command("yt-data")
   .option("--region <code>", "content region, 2-letter country code (default: US)")
   .option("--cookies <file>", "Netscape cookies.txt for age-restricted / members-only content")
   .option("--proxy <url>", "HTTP or SOCKS proxy URL")
-  .option("--no-cache", "don't read or write cached session data")
+  .option("--no-cache", "don't read or write cached data")
+  .option("--refresh", "ignore cached results but store fresh ones")
   .option("-q, --quiet", "only print errors to stderr")
   .option("-v, --verbose", "debug logging to stderr")
   .addHelpText(
@@ -39,6 +41,13 @@ const getCtx = () => {
 
 registerChannel(program, getCtx);
 registerVideo(program, getCtx);
+registerVideos(program, getCtx);
+
+// `yt-data videos … | head` closes stdout early; that's a normal way to stop, not an error.
+process.stdout.on("error", (err: NodeJS.ErrnoException) => {
+  if (err.code === "EPIPE") process.exit(0);
+  throw err;
+});
 
 try {
   await program.parseAsync();

@@ -1,6 +1,6 @@
 # yt-data — Project Plan
 
-Status: **Phase 1 done** (`channel`, `video`) · Last updated: 2026-10-03
+Status: **Phase 2 done** (`channel`, `video`, `videos`) · Last updated: 2026-10-03
 
 ## 1. Goal
 
@@ -96,7 +96,11 @@ Keep the dependency list short; every dependency must survive `bun build --compi
   with ANDROID `/player` (caption tracks and the real playability status — WEB without a
   player script always reports `UNPLAYABLE` and omits captions).
 - Channel = `/browse` (header, metadata) + about panel continuation (exact counts, join
-  date, country, links). Channel tab listings now use `LockupView` items (relevant to Phase 2).
+  date, country, links).
+- Listings: channel tabs return `LockupView` items (Shorts: `ShortsLockupView`), 30 per
+  page, with compact text ("4.7M", "2d ago"). Sort chips are labelled Latest / Popular /
+  Oldest. `--type all` uses the uploads playlist `UU<channel id minus UC>` (100 per page),
+  which has no sort chips. Shorts items carry no date or duration.
 - youtubei.js logs parser drift to the console; it is silenced and failures are mapped to
   typed errors instead.
 
@@ -227,8 +231,8 @@ Precedence: flag > env > config file > default.
   also used for InnerTube) for age-restricted/members-only content.
 - `--proxy <url>`.
 - `--concurrency` (default 4) for multi-video fetches; polite default delay.
-- Cache InnerTube responses (default TTL: channel 6 h, video 1 h, transcript 7 d);
-  `--no-cache` / `--refresh`.
+- Cache mapped results (TTL: handle lookup 7 d, channel 6 h, video 1 h, transcript 7 d),
+  tagged with the app version; `--no-cache` / `--refresh`. Listings aren't cached.
 - Fallback chain per command; when a fallback is used, note it on stderr and in a
   `source` field.
 - `doctor` command exercises each source so breakage is obvious.
@@ -269,7 +273,7 @@ Precedence: flag > env > config file > default.
 |---|---|---|
 | 0 | Scaffold: repo files, tooling, plan | ✅ |
 | 1 | Core: `resolve`, `output`, `errors`, `config`, `http`; `channel`, `video` | ✅ |
-| 2 | `videos` (pagination, `--limit`, `--type`, `--full`), cache | Lists a 1k-video channel via NDJSON |
+| 2 | `videos` (pagination, `--limit`, `--type`, `--full`), cache | ✅ |
 | 3 | `transcript` (InnerTube → yt-dlp fallback), `thumbnail` | txt/vtt/srt/json output |
 | 4 | yt-dlp manager + `download`; `doctor` | Downloads 1080p + audio-only; doctor reports all deps |
 | 5 | `update` (self + yt-dlp), update notices | Updates from a real GitHub Release |

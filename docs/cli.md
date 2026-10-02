@@ -2,7 +2,7 @@
 
 > This file is also what `yt-data docs` prints, so keep it accurate and example-heavy.
 >
-> **Implemented:** `channel`, `video`. Sections marked _(planned)_ are the v1 spec and
+> **Implemented:** `channel`, `video`, `videos`. Sections marked _(planned)_ are the v1 spec and
 > land per the phases in [`plan.md`](plan.md).
 
 ## Synopsis
@@ -20,8 +20,8 @@ yt-data <command> [options] [refs...]
 |---|---|---|
 | `-f, --format <fmt>` | `json` | `json`, `ndjson`, `table`, `csv` |
 | `--fields <list>` | all | Comma-separated fields to keep, dot paths allowed (`channel.name`) |
-| `--no-cache` | | Don't read or write cached data (currently the InnerTube visitor session) |
-| `--refresh` | | _(planned)_ Skip cached values but write fresh ones |
+| `--no-cache` | | Don't read or write cached data |
+| `--refresh` | | Ignore cached results but store fresh ones |
 | `--cookies <file>` | | Netscape cookies.txt for age-restricted / members-only content |
 | `--cookies-from-browser <name>` | | _(planned, with `download`)_ `chrome`, `firefox`, … (passed to yt-dlp) |
 | `--proxy <url>` | | HTTP/SOCKS proxy |
@@ -49,22 +49,40 @@ yt-data channel https://www.youtube.com/@mkbhd --fields name,subscriberCount,vid
 yt-data channel @mkbhd @LinusTechTips --format table --fields name,subscriberCount
 ```
 
-### `videos <ref>` _(planned)_
+### `videos <ref>`
 
-List videos for a channel or playlist.
+List videos from a channel tab or a playlist, following pagination. `<ref>` is a channel
+(`@handle`, URL, `UC…`) or a playlist (`PL…`, playlist URL).
 
 | Option | Default | Description |
 |---|---|---|
-| `--type <t>` | `videos` | `videos`, `shorts`, `streams`, `all` |
-| `--sort <s>` | `newest` | `newest`, `popular`, `oldest` |
+| `-t, --type <t>` | `videos` | `videos`, `shorts`, `streams`, or `all` (every upload, newest first) |
+| `-s, --sort <s>` | `newest` | `newest`, `popular`, `oldest` (channel tabs only; availability varies per tab) |
 | `-n, --limit <n>` | `50` | Max items; `0` = all |
-| `--since <date>` | | Stop at videos older than this (ISO date or `30d`); implies exact dates |
-| `--full` | | Fetch full metadata per video (exact `publishedAt`, likes, description). Slower. |
+| `--since <when>` | | Stop at videos older than this: ISO date or `30d`, `12w`, `6mo`, `1y`. Newest-first only |
+| `--full` | | Emit full `video` objects (exact `publishedAt`, likes, description, …); one request per video, cached |
+| `--concurrency <n>` | `4` | Parallel requests for `--full` |
+
+Item fields (without `--full`): `id`, `url`, `title`, `type` (`video`/`short`/`stream`, or
+`null` for `--type all` and playlists), `durationSeconds`, `viewCount` (approximate) +
+`viewCountText`, `publishedText` (e.g. "2d ago"), `publishedAtApprox`, `isLive`,
+`isUpcoming`, `isMembersOnly`, `thumbnail`, `channelName` (playlists only).
+
+Notes:
+- Output is always a list: a JSON array, or one object per line with `--format ndjson`
+  (streamed as pages arrive, so large channels can be piped incrementally).
+- Without `--full`, `--since` compares against `publishedAtApprox`, estimated from
+  relative text ("3w ago" ≈ accurate to a week). With `--full` it uses exact dates.
+- Shorts listings have no dates or durations; `--since` with shorts needs `--full`.
+- With `--full`, a video that fails (e.g. members-only) is reported on stderr and
+  skipped; the exit code reflects the first failure.
 
 ```
-yt-data videos @mkbhd --limit 10 --fields id,title,viewCount
+yt-data videos @mkbhd --limit 10 --fields id,title,viewCount,publishedText
+yt-data videos @mkbhd --type shorts --sort popular -n 20
 yt-data videos @mkbhd --limit 0 --format ndjson > all.ndjson
-yt-data videos PLxxxxxxxx --full
+yt-data videos @mkbhd --since 30d --full --fields id,title,publishedAt,likeCount
+yt-data videos https://www.youtube.com/playlist?list=PLBsP89CPrMeO7uztAu6YxSB10cRMpjgiY
 ```
 
 ### `video <ref...>`
@@ -181,6 +199,12 @@ argument, lists commands that have schemas.
 | 5 | `UNAVAILABLE` | private, age-restricted, members-only, region-blocked |
 | 6 | `MISSING_DEPENDENCY` | yt-dlp / ffmpeg not found |
 | 7 | `NETWORK` | connection failure |
+
+## Caching
+
+Results are cached under the cache directory (`~/.cache/yt-data` on Linux): handle → id
+lookups for 7 days, channels for 6 hours, videos for 1 hour, plus the InnerTube visitor
+session (3 days). Listings are never cached. Entries are discarded when yt-data is upgraded.
 
 ## Environment
 

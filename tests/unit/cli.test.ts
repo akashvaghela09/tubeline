@@ -42,6 +42,12 @@ describe("cli", () => {
     [["channel", "not a ref"], "Cannot parse"],
     [["video", "@mkbhd"], "is a channel, not a video"],
     [["channel", "dQw4w9WgXcQ"], "got a video"],
+    [["videos", "dQw4w9WgXcQ"], "is a video"],
+    [["videos", "@x", "--since", "yesterday"], "Invalid --since"],
+    [["videos", "@x", "--limit", "abc"], "--limit"],
+    [["videos", "@x", "--type", "reels"], "reels"],
+    [["videos", "@x", "--type", "shorts", "--since", "30d"], "no dates"],
+    [["videos", "@x", "--sort", "popular", "--since", "30d"], "newest-first"],
   ])("usage error %p → exit 2 + JSON on stderr", async (args, fragment) => {
     const r = await run(...args);
     expect(r.code).toBe(2);

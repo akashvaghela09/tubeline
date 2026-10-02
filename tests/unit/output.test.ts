@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { CliError } from "../../src/core/errors.ts";
-import { flatten, parseFields, project, render } from "../../src/core/output.ts";
+import { createListWriter, flatten, parseFields, project, render } from "../../src/core/output.ts";
 
 const video = {
   id: "abc",
@@ -86,4 +86,20 @@ describe("render", () => {
 
 test("flatten serializes arrays as JSON", () => {
   expect(flatten({ a: { b: 1 }, c: [1, 2], d: null })).toEqual({ "a.b": "1", c: "[1,2]", d: "" });
+});
+
+test("createListWriter streams ndjson and buffers other formats", () => {
+  const chunks: string[] = [];
+  const nd = createListWriter({ format: "ndjson" }, (s) => chunks.push(s));
+  nd.write({ a: 1 });
+  expect(chunks).toEqual(['{"a":1}\n']);
+  nd.end();
+  expect(chunks.length).toBe(1);
+
+  const out: string[] = [];
+  const json = createListWriter({ format: "json", fields: ["a"] }, (s) => out.push(s));
+  json.write({ a: 1, b: 2 });
+  expect(out).toEqual([]);
+  json.end();
+  expect(out).toEqual(['[{"a":1}]\n']);
 });

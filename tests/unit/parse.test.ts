@@ -5,6 +5,8 @@ import {
   parseCount,
   parseDescriptionChapters,
   parseDisplayDate,
+  parseRelativeAge,
+  parseSince,
   toUtcIso,
   unwrapRedirect,
 } from "../../src/core/parse.ts";
@@ -79,5 +81,39 @@ describe("parseDescriptionChapters", () => {
     expect(parseDescriptionChapters("0:30 A\n1:00 B\n2:00 C")).toEqual([]);
     expect(parseDescriptionChapters("0:00 A\n1:00 B")).toEqual([]);
     expect(parseDescriptionChapters(null)).toEqual([]);
+  });
+});
+
+describe("parseRelativeAge", () => {
+  const now = Date.parse("2026-10-01T00:00:00Z");
+  test.each([
+    ["2d ago", "2026-09-29T00:00:00.000Z"],
+    ["3 weeks ago", "2026-09-10T00:00:00.000Z"],
+    ["Streamed 1y ago", "2025-10-01T00:00:00.000Z"],
+    ["5mo ago", "2026-05-04T00:00:00.000Z"],
+    ["1 hour ago", "2026-09-30T23:00:00.000Z"],
+    ["10 minutes ago", "2026-09-30T23:50:00.000Z"],
+  ])("%s", (text, iso) => {
+    expect(parseRelativeAge(text, now)).toBe(iso);
+  });
+
+  test.each([null, "Scheduled for 10/5/26", "2d", "yesterday"])("%p → null", (text) => {
+    expect(parseRelativeAge(text, now)).toBeNull();
+  });
+});
+
+describe("parseSince", () => {
+  const now = Date.parse("2026-10-01T00:00:00Z");
+  test("relative spans", () => {
+    expect(parseSince("30d", now)?.toISOString()).toBe("2026-09-01T00:00:00.000Z");
+    expect(parseSince("2w", now)?.toISOString()).toBe("2026-09-17T00:00:00.000Z");
+    expect(parseSince("1y", now)?.toISOString()).toBe("2025-10-01T00:00:00.000Z");
+  });
+  test("ISO dates", () => {
+    expect(parseSince("2026-01-15", now)?.toISOString()).toBe("2026-01-15T00:00:00.000Z");
+    expect(parseSince("2026-01-15T12:00:00Z", now)?.toISOString()).toBe("2026-01-15T12:00:00.000Z");
+  });
+  test.each(["yesterday", "30", "5x", "2026-13-45"])("rejects %p", (v) => {
+    expect(parseSince(v, now)).toBeNull();
   });
 });

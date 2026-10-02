@@ -1,22 +1,31 @@
 // Same scenarios against real YouTube. Opt-in: YT_DATA_LIVE=1 bun test
 import { describe, expect, test } from "bun:test";
+import { z } from "zod";
 import { CliError, type ErrorCode } from "../../src/core/errors.ts";
 import { createFetch } from "../../src/core/http.ts";
 import { Channel } from "../../src/models/channel.ts";
-import { Video } from "../../src/models/video.ts";
+import { Video, VideoSummary } from "../../src/models/video.ts";
 import { createInnertube, InnertubeSource } from "../../src/sources/innertube.ts";
 import { SCENARIOS } from "../helpers/scenarios.ts";
 
 const live = process.env.YT_DATA_LIVE === "1";
 
-const EXPECT: Record<string, { schema?: typeof Channel | typeof Video; error?: ErrorCode }> = {
-  "channel-mkbhd": { schema: Channel },
-  "channel-by-id": { schema: Channel },
+const List = z.array(VideoSummary.strict()).min(1);
+
+const EXPECT: Record<string, { schema?: z.ZodType; error?: ErrorCode }> = {
+  "channel-mkbhd": { schema: Channel.strict() },
+  "channel-by-id": { schema: Channel.strict() },
   "channel-missing-handle": { error: "NOT_FOUND" },
-  "video-rickroll": { schema: Video },
-  "video-chapters": { schema: Video },
-  "video-age-restricted": { schema: Video },
+  "video-rickroll": { schema: Video.strict() },
+  "video-chapters": { schema: Video.strict() },
+  "video-age-restricted": { schema: Video.strict() },
   "video-missing": { error: "NOT_FOUND" },
+  "list-videos": { schema: List },
+  "list-shorts": { schema: List },
+  "list-streams": { schema: List },
+  "list-popular": { schema: List },
+  "list-all": { schema: List },
+  "list-playlist": { schema: List },
 };
 
 describe.skipIf(!live)("live InnerTube", () => {
@@ -44,7 +53,7 @@ describe.skipIf(!live)("live InnerTube", () => {
           }
           throw err;
         }
-        want.schema?.strict().parse(result);
+        want.schema?.parse(result);
       }
     }, 30_000);
   }

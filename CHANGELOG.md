@@ -7,6 +7,10 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 ## [Unreleased]
 
 ### Added
+- `yt-data videos <ref>`: list a channel's videos / shorts / streams / all uploads, or a
+  playlist, with pagination, `--limit`, `--sort newest|popular|oldest`, `--since`, `--full`
+  (full metadata per video) and NDJSON streaming.
+- Result cache with per-kind TTLs; `--refresh` to bypass reads.
 - `yt-data channel <refs...>`: channel details (handle, counts, join date, country, links,
   avatar, banner, keywords).
 - `yt-data video <refs...>`: full video metadata (counts, exact publish date, channel,
