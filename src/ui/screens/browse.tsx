@@ -4,22 +4,14 @@ import { useKeyboard } from "@opentui/react";
 import { useEffect, useReducer } from "react";
 import { toCliError } from "../../core/errors.ts";
 import type { Ref } from "../../core/resolve.ts";
-import { compact } from "../../core/style.ts";
 import type { Channel } from "../../models/channel.ts";
 import type { SearchResult } from "../../models/search.ts";
 import type { VideoSummary } from "../../models/video.ts";
 import type { ListType, SearchType } from "../../sources/innertube.ts";
-import {
-  audioWithOptions,
-  downloadWithOptions,
-  queueThumbnails,
-  queueTranscripts,
-  queueVideos,
-  type Target,
-} from "../actions.ts";
+import { openDownload, queueThumbnails, queueTranscripts, type Target } from "../actions.ts";
 import { useKeys, useUi } from "../app.tsx";
 import { Line, List } from "../components.tsx";
-import { row, searchCells, VIDEO_COLUMNS, videoCells } from "../format.ts";
+import { headerParts, num, searchParts, videoParts } from "../format.ts";
 import { theme } from "../theme.ts";
 
 export type BrowseSource =
@@ -50,6 +42,13 @@ export interface BrowseModel {
 
 const CHANNEL_TABS: ListType[] = ["videos", "shorts", "streams", "all"];
 const SEARCH_TABS: SearchType[] = ["video", "shorts", "channel", "playlist"];
+/** One word set everywhere: videos, shorts, channels, playlists. */
+const TAB_LABEL: Record<string, string> = {
+  video: "videos",
+  channel: "channels",
+  playlist: "playlists",
+  all: "all uploads",
+};
 const PAGE = 30;
 
 export function newBrowse(source: BrowseSource): BrowseModel {
@@ -142,6 +141,13 @@ export function BrowseScreen({ model }: { model: BrowseModel }) {
         .then((c) => {
           model.channel = c;
           model.title = c.name;
+          if (model.source.kind === "channel") {
+            const r = model.source.ref;
+            ui.labelRecent(
+              r.kind === "channelUrl" ? r.url : r.kind === "channel" ? r.id : "",
+              `${c.name}  · channel`,
+            );
+          }
           redraw();
         })
         .catch(() => {});
@@ -201,7 +207,7 @@ export function BrowseScreen({ model }: { model: BrowseModel }) {
     ui.push({ kind: "video", model: { id: item.id, video: null, error: null, cursor: 0 } });
   };
 
-  const bulk = t.selected.size ? ` ${t.selected.size} selected` : "";
+  const bulk = t.selected.size ? ` ${t.selected.size}` : "";
   useKeys(
     model.filtering
       ? [
@@ -211,12 +217,13 @@ export function BrowseScreen({ model }: { model: BrowseModel }) {
       : [
           ["Enter", "open"],
           ["space", "select"],
-          ["d", `video${bulk}`],
+          ["d", `download${bulk}`],
+          ["/", "filter"],
+          ...(model.source.kind !== "playlist" ? ([["←→", "tabs"]] as [string, string][]) : []),
           ["a", "audio"],
           ["t", "transcripts"],
-          ["i", "thumbs"],
-          ["/", "filter"],
-          ...(model.source.kind !== "playlist" ? ([["Tab", "switch"]] as [string, string][]) : []),
+          ["i", "thumbnails"],
+          ["*", "select all"],
           ["Esc", "back"],
         ],
   );
@@ -270,16 +277,24 @@ export function BrowseScreen({ model }: { model: BrowseModel }) {
       case "tab":
         switchTab(k.shift ? -1 : 1);
         return;
+      case "right":
+        switchTab(1);
+        return;
+      case "left":
+        switchTab(-1);
+        return;
+      case "backspace":
+        return ui.pop();
       case "escape":
         if (t.selected.size) t.selected.clear();
         else if (t.filter) t.filter = "";
         else return ui.pop();
         break;
       case "d":
-        withTargets((ts) => (k.shift ? downloadWithOptions(ui, ts) : queueVideos(ui, ts, "video")));
+        withTargets((ts) => openDownload(ui, ts, null, "video"));
         break;
       case "a":
-        withTargets((ts) => (k.shift ? audioWithOptions(ui, ts) : queueVideos(ui, ts, "audio")));
+        withTargets((ts) => openDownload(ui, ts, null, "audio"));
         break;
       case "t":
         withTargets((ts) => queueTranscripts(ui, ts));
@@ -304,14 +319,14 @@ export function BrowseScreen({ model }: { model: BrowseModel }) {
   const current = s.kind === "channel" ? s.tab : s.kind === "search" ? s.type : "";
   const ch = model.channel;
   const status = [
-    `${t.items.length}${t.exhausted ? "" : "+"} loaded`,
-    t.loading ? "loading…" : null,
+    t.loading ? "loading…" : `${t.items.length} loaded${t.exhausted ? "" : " · more on scroll"}`,
     t.filter ? `filter “${t.filter}” (${visible.length})` : null,
-    t.selected.size ? `${t.selected.size} selected` : null,
+    t.selected.size ? `${t.selected.size} selected · * all · Esc clear` : null,
   ]
     .filter(Boolean)
     .join(" · ");
   const isSearch = s.kind === "search";
+  const listWidth = w - 4;
 
   return (
     <box flexDirection="column">
@@ -321,39 +336,42 @@ export function BrowseScreen({ model }: { model: BrowseModel }) {
         </span>
         <span fg={theme.accent}>{ch?.isVerified ? " ✓" : ""}</span>
         <span fg={theme.dim}>
-          {ch ? `  ${ch.handle ?? ""}  ${compact(ch.subscriberCount)} subscribers` : ""}
+          {ch ? `  ${ch.handle ?? ""}  ${num(ch.subscriberCount)} subscribers` : ""}
         </span>
       </text>
       <text wrapMode="none" truncate>
         {tabs.map((name, i) => (
           <span key={name} fg={name === current ? theme.accent : theme.dim}>
-            {`${i ? "  " : ""}${name === current ? `[${name}]` : ` ${name} `}`}
+            {i ? "   " : ""}
+            {name === current ? (
+              <u>
+                <strong>{TAB_LABEL[name] ?? name}</strong>
+              </u>
+            ) : (
+              (TAB_LABEL[name] ?? name)
+            )}
           </span>
         ))}
-        <span fg={theme.dim}>{`${tabs.length ? "    " : ""}${status}`}</span>
+        <span fg={theme.dim}>{`${tabs.length ? "     " : ""}${status}`}</span>
       </text>
       {model.filtering ? (
         <Line fg={theme.yellow}>{`/ ${t.filter}█`}</Line>
       ) : (
-        <Line fg={theme.faint}>
-          {`${t.selected.size ? "    " : "  "}${row(["length", "views", "age", isSearch ? "title · channel" : "title"], VIDEO_COLUMNS, w)}`}
-        </Line>
+        <Line fg={theme.dim}>{`    ${headerParts(isSearch, listWidth)}`}</Line>
       )}
       {t.error ? <Line fg={theme.red}>{`✗ ${t.error}`}</Line> : null}
       <List
         rows={visible.map((item) => ({
           key: itemKey(item),
-          text: row(
-            isSearch ? searchCells(item as SearchResult) : videoCells(item as VideoSummary),
-            VIDEO_COLUMNS,
-            w,
-          ),
-          color: "type" in item && item.type !== "video" && isSearch ? theme.cyan : undefined,
+          parts: isSearch
+            ? searchParts(item as SearchResult, listWidth)
+            : videoParts(item as VideoSummary, listWidth),
         }))}
         cursor={cursor}
         height={ui.bodyHeight - 3 - (t.error ? 1 : 0)}
+        width={w}
         selected={t.selected}
-        showMarks={t.selected.size > 0}
+        marks
         empty={t.loading ? "Loading…" : t.filter ? "No matches." : "Nothing here."}
       />
     </box>

@@ -1,5 +1,5 @@
 // Remembered choices for the interactive UI (download folder, quality, formats).
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { appPaths } from "../core/paths.ts";
@@ -16,6 +16,9 @@ export interface RecentItem {
 
 export interface Prefs {
   recent: RecentItem[];
+  /** Folders saved to recently, newest first. */
+  recentDirs: string[];
+  theme: string;
   downloadDir: string;
   videoQuality: Exclude<Quality, "audio">;
   audioFormat: AudioFormat;
@@ -42,6 +45,8 @@ export function loadPrefs(): Prefs {
   const dl = downloadsDir();
   const defaults: Prefs = {
     recent: [],
+    recentDirs: [],
+    theme: "auto",
     downloadDir: dl,
     videoQuality: "best",
     audioFormat: "mp3",
@@ -49,11 +54,16 @@ export function loadPrefs(): Prefs {
     transcriptDir: dl,
     thumbnailDir: dl,
   };
+  let saved: Partial<Prefs> = {};
   try {
-    return { ...defaults, ...(JSON.parse(readFileSync(file(), "utf8")) as Partial<Prefs>) };
-  } catch {
-    return defaults;
+    saved = JSON.parse(readFileSync(file(), "utf8")) as Partial<Prefs>;
+  } catch {}
+  const prefs = { ...defaults, ...saved };
+  // A remembered folder that has since disappeared (e.g. a temp dir) falls back to Downloads.
+  for (const key of ["downloadDir", "transcriptDir", "thumbnailDir"] as const) {
+    if (!existsSync(prefs[key])) prefs[key] = dl;
   }
+  return prefs;
 }
 
 export function savePrefs(prefs: Prefs) {
@@ -84,4 +94,8 @@ export function addRecent(prefs: Prefs, item: RecentItem, max = 8) {
     item,
     ...prefs.recent.filter((r) => !(r.kind === item.kind && r.value === item.value)),
   ].slice(0, max);
+}
+
+export function rememberDir(prefs: Prefs, dir: string, max = 6) {
+  prefs.recentDirs = [dir, ...prefs.recentDirs.filter((d) => d !== dir)].slice(0, max);
 }

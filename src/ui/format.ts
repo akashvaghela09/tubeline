@@ -1,8 +1,10 @@
 // Pure, width-aware text helpers for the interactive UI (unit-tested, no rendering).
-import { bytes, compact, duration, truncate, width } from "../core/style.ts";
+import { bytes, duration, truncate, width } from "../core/style.ts";
 import type { SearchResult } from "../models/search.ts";
 import type { VideoSummary } from "../models/video.ts";
 import type { Progress } from "../services/download.ts";
+import type { Part } from "./components.tsx";
+import { theme } from "./theme.ts";
 
 export function pad(s: string, w: number, align: "left" | "right" = "left"): string {
   const gap = Math.max(0, w - width(s));
@@ -93,6 +95,23 @@ export function row(cells: string[], columns: Column[], total: number): string {
     .join("  ");
 }
 
+/** 3 significant digits so a column of counts lines up: 999, 1.20K, 27.5M, 1.80B. */
+export function num(n: number | null | undefined): string {
+  if (n === null || n === undefined) return "–";
+  const units: [number, string][] = [
+    [1e9, "B"],
+    [1e6, "M"],
+    [1e3, "K"],
+  ];
+  for (const [v, u] of units) {
+    if (n >= v) {
+      const x = n / v;
+      return `${x >= 100 ? x.toFixed(0) : x >= 10 ? x.toFixed(1) : x.toFixed(2)}${u}`;
+    }
+  }
+  return String(n);
+}
+
 export const VIDEO_COLUMNS: Column[] = [
   { width: 8, align: "right" },
   { width: 6, align: "right" },
@@ -100,40 +119,67 @@ export const VIDEO_COLUMNS: Column[] = [
   { width: 0 },
 ];
 
-export function videoCells(v: VideoSummary): string[] {
-  const tag = v.isLive
-    ? " ● LIVE"
-    : v.isUpcoming
-      ? " (upcoming)"
-      : v.isMembersOnly
-        ? " (members)"
-        : "";
+const LEAD = 8 + 2 + 6 + 2 + 9 + 2;
+
+function lead(a: string, b: string, c: string): string {
+  return `${pad(truncate(a, 8), 8, "right")}  ${pad(truncate(b, 6), 6, "right")}  ${pad(truncate(c, 9), 9)}  `;
+}
+
+/** Channel/playlist list row: length · views · age · title. `w` = width available for text. */
+export function videoParts(v: VideoSummary, w: number): Part[] {
+  const tag = v.isLive ? "● LIVE " : v.isUpcoming ? "upcoming " : v.isMembersOnly ? "members " : "";
   return [
-    duration(v.durationSeconds),
-    compact(v.viewCount),
-    v.publishedText?.replace(/^Streamed /, "") ?? "",
-    v.title + tag,
+    {
+      text: lead(
+        duration(v.durationSeconds),
+        num(v.viewCount),
+        v.publishedText?.replace(/^Streamed /, "") ?? "",
+      ),
+      fg: theme.dim,
+    },
+    ...(tag ? [{ text: tag, fg: v.isLive ? theme.red : theme.yellow }] : []),
+    { text: truncate(v.title, Math.max(4, w - LEAD - width(tag))) },
   ];
 }
 
-export function searchCells(r: SearchResult): string[] {
+/** Search row: same columns, plus the channel in its own dim column when there's room. */
+export function searchParts(r: SearchResult, w: number): Part[] {
+  const room = Math.max(4, w - LEAD);
   if (r.type === "video") {
+    const chanW = room >= 70 ? 22 : 0;
+    const titleW = room - (chanW ? chanW + 2 : 0);
     return [
-      duration(r.durationSeconds),
-      compact(r.viewCount),
-      r.publishedText ?? "",
-      `${r.title}  · ${r.channel.name}`,
+      {
+        text: lead(duration(r.durationSeconds), num(r.viewCount), r.publishedText ?? ""),
+        fg: theme.dim,
+      },
+      { text: pad(truncate(r.title, titleW), chanW ? titleW : 0) },
+      ...(chanW ? [{ text: `  ${truncate(r.channel.name, chanW)}`, fg: theme.dim }] : []),
     ];
   }
   if (r.type === "channel") {
-    return ["channel", compact(r.subscriberCount), "", `${r.name}  ${r.handle ?? ""}`];
+    return [
+      { text: lead("channel", num(r.subscriberCount), ""), fg: theme.dim },
+      { text: truncate(r.name, Math.max(4, room - 20)), fg: theme.cyan },
+      { text: r.handle ? `  ${r.handle}` : "", fg: theme.dim },
+    ];
   }
   return [
-    "playlist",
-    r.videoCount !== null ? String(r.videoCount) : "",
-    "",
-    `${r.title}${r.channelName ? `  · ${r.channelName}` : ""}`,
+    {
+      text: lead(
+        "playlist",
+        r.videoCount !== null ? `${r.videoCount}` : "",
+        r.updatedText?.replace(/^(Last )?updated /i, "") ?? "",
+      ),
+      fg: theme.dim,
+    },
+    { text: truncate(r.title, Math.max(4, room - 22)), fg: theme.cyan },
+    { text: r.channelName ? `  ${truncate(r.channelName, 20)}` : "", fg: theme.dim },
   ];
+}
+
+export function headerParts(search: boolean, w: number): string {
+  return `${lead("length", "views", "age")}${search && w - LEAD >= 70 ? `${pad("title", w - LEAD - 24)}  channel` : "title"}`;
 }
 
 /** Word-wrap plain text to a width (long words are hard-split). */

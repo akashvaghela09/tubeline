@@ -64,7 +64,7 @@ export function ViewerScreen({ title, text }: { title: string; text: string }) {
   ]);
   useKeyboard((key) => {
     if (key.ctrl || key.meta) return;
-    if (key.name === "escape") return ui.pop();
+    if (key.name === "escape" || key.name === "backspace") return ui.pop();
     const next = scrollKeys(key, top, lines.length, height);
     if (next !== null) setTop(next);
   });

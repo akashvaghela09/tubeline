@@ -1,20 +1,14 @@
-// One video: a card with what decides the action, then hotkeyed actions.
+// One video: a card with what decides the action, then keyed actions.
 import { useKeyboard } from "@opentui/react";
 import { useEffect, useReducer } from "react";
 import { toCliError } from "../../core/errors.ts";
 import { videoHuman } from "../../core/human.ts";
-import { bytes, compact, duration, setColor } from "../../core/style.ts";
+import { bytes, duration, setColor } from "../../core/style.ts";
 import type { Video } from "../../models/video.ts";
-import {
-  audioWithOptions,
-  downloadWithOptions,
-  openInBrowser,
-  queueThumbnails,
-  queueVideos,
-} from "../actions.ts";
+import { openDownload, openInBrowser, queueThumbnails } from "../actions.ts";
 import { useKeys, useUi } from "../app.tsx";
 import { Blank, Line, List } from "../components.tsx";
-import { tildify, wrap } from "../format.ts";
+import { num, tildify, wrap } from "../format.ts";
 import { theme } from "../theme.ts";
 
 export interface VideoModel {
@@ -42,6 +36,7 @@ export function VideoScreen({ model }: { model: VideoModel }) {
       .getVideo(model.id)
       .then((v) => {
         model.video = v;
+        ui.labelRecent(model.id, `${v.title}  · ${v.channel.name}`);
         if (live) redraw();
       })
       .catch((err) => {
@@ -52,36 +47,40 @@ export function VideoScreen({ model }: { model: VideoModel }) {
     return () => {
       live = false;
     };
-  }, [model, ui.services]);
+  }, [model, ui]);
 
   const v = model.video;
   const target = v ? [{ id: v.id, title: v.title }] : [];
-  const existing = v ? ui.services.existing(v.id, ui.prefs.downloadDir) : null;
-  const q = ui.prefs.videoQuality;
+  const p = ui.prefs;
+  const q = p.videoQuality;
+  const best = v?.qualities[0];
   const qSize = v
     ? q === "best"
-      ? v.qualities[0]?.bytes
+      ? best?.bytes
       : v.qualities.find((x) => x.label === q)?.bytes
     : null;
+  const langs = v ? [...new Set(v.captions.map((c) => c.lang.split("-")[0]))] : [];
 
   const actions: Action[] = v
     ? [
         {
           key: "d",
-          label: "Download video",
-          detail: `${q === "best" ? `best${v.qualities[0] ? ` (${v.qualities[0].label})` : ""}` : q}${qSize ? ` ≈ ${bytes(qSize)}` : ""} → ${tildify(ui.prefs.downloadDir)}   D: choose`,
-          run: () => queueVideos(ui, target, "video"),
+          label: "Download",
+          detail: `video ${q === "best" ? `best${best ? ` (${best.label})` : ""}` : q}${qSize ? ` ≈ ${bytes(qSize)}` : ""} → ${tildify(p.downloadDir)}`,
+          run: () => openDownload(ui, target, v, "video"),
         },
         {
           key: "a",
           label: "Download audio",
-          detail: `${ui.prefs.audioFormat} → ${tildify(ui.prefs.downloadDir)}   A: choose`,
-          run: () => queueVideos(ui, target, "audio"),
+          detail: `${p.audioFormat} → ${tildify(p.downloadDir)}`,
+          run: () => openDownload(ui, target, v, "audio"),
         },
         {
           key: "t",
           label: "Transcript",
-          detail: v.captions.length ? "read, then save" : "no captions listed — will try anyway",
+          detail: langs.length
+            ? langs.slice(0, 5).join(", ") + (langs.length > 5 ? ` +${langs.length - 5}` : "")
+            : "no captions listed — will try",
           run: () =>
             ui.push({
               kind: "transcript",
@@ -101,7 +100,7 @@ export function VideoScreen({ model }: { model: VideoModel }) {
         {
           key: "i",
           label: "Thumbnail",
-          detail: `→ ${tildify(ui.prefs.thumbnailDir)}`,
+          detail: `→ ${tildify(p.thumbnailDir)}`,
           run: () => queueThumbnails(ui, target),
         },
         {
@@ -119,18 +118,14 @@ export function VideoScreen({ model }: { model: VideoModel }) {
             ui.push({ kind: "viewer", title: "Details", text: videoHuman([v]) });
           },
         },
-        { key: "o", label: "Open in browser", detail: v.url, run: () => openInBrowser(v.url) },
+        { key: "o", label: "Open in browser", detail: "", run: () => openInBrowser(v.url) },
       ]
     : [];
 
   useKeys(
     v
       ? [
-          ["d", "video"],
-          ["a", "audio"],
-          ["t", "transcript"],
-          ["i", "thumbnail"],
-          ["c", "channel"],
+          ["↑↓ Enter", "choose"],
           ["Esc", "back"],
         ]
       : [["Esc", "back"]],
@@ -138,14 +133,12 @@ export function VideoScreen({ model }: { model: VideoModel }) {
 
   useKeyboard((key) => {
     if (key.ctrl || key.meta) return;
-    if (key.name === "escape") return ui.pop();
+    if (key.name === "escape" || key.name === "backspace") return ui.pop();
     if (!v) return;
     if (key.name === "up") model.cursor = Math.max(0, model.cursor - 1);
     else if (key.name === "down") model.cursor = Math.min(actions.length - 1, model.cursor + 1);
     else if (key.name === "return") actions[model.cursor]?.run();
-    else if (key.name === "d" && key.shift) downloadWithOptions(ui, target, v);
-    else if (key.name === "a" && key.shift) audioWithOptions(ui, target);
-    else if (!key.ctrl && !key.meta) actions.find((a) => a.key === key.name && !key.shift)?.run();
+    else actions.find((a) => a.key === key.name && !key.shift)?.run();
     redraw();
   });
 
@@ -167,17 +160,23 @@ export function VideoScreen({ model }: { model: VideoModel }) {
   }
 
   const w = Math.max(20, ui.width - 4);
-  const captions = [...new Set(v.captions.map((c) => (c.isAuto ? `${c.lang} (auto)` : c.lang)))];
+  const existing = ui.services.existing(v.id, p.downloadDir);
   const stats = [
-    `${compact(v.viewCount)} views`,
-    v.likeCount !== null ? `${compact(v.likeCount)} likes` : null,
+    `${num(v.viewCount)} views`,
+    v.likeCount !== null ? `${num(v.likeCount)} likes` : null,
     duration(v.durationSeconds),
     v.publishedAt?.slice(0, 10),
   ]
     .filter(Boolean)
     .join(" · ");
-  const descHeight = Math.max(0, ui.bodyHeight - 8 - actions.length - 2);
-  const desc = wrap(v.description.trim(), w).slice(0, descHeight);
+  const captions = [...new Set(v.captions.map((c) => (c.isAuto ? `${c.lang} (auto)` : c.lang)))];
+  const descHeight = Math.max(
+    0,
+    ui.bodyHeight - 7 - actions.length - (v.playability.status !== "OK" ? 1 : 0),
+  );
+  const descAll = wrap(v.description.trim(), w);
+  const cut = descAll.length > descHeight;
+  const desc = descAll.slice(0, cut ? Math.max(0, descHeight - 1) : descHeight);
 
   return (
     <box flexDirection="column">
@@ -185,11 +184,13 @@ export function VideoScreen({ model }: { model: VideoModel }) {
       <text wrapMode="none" truncate>
         <span fg={theme.fg}>{v.channel.name}</span>
         <span fg={theme.accent}>{v.channel.isVerified ? " ✓" : ""}</span>
-        <span
-          fg={theme.dim}
-        >{`  ${v.channel.subscriberCount !== null ? `${compact(v.channel.subscriberCount)} subscribers` : ""}`}</span>
+        <span fg={theme.dim}>
+          {v.channel.subscriberCount !== null
+            ? `  ${num(v.channel.subscriberCount)} subscribers`
+            : ""}
+          {`  ·  ${stats}`}
+        </span>
       </text>
-      <Line fg={theme.dim}>{stats}</Line>
       <text wrapMode="none" truncate>
         <span fg={theme.dim}>captions </span>
         <span fg={theme.fg}>
@@ -200,12 +201,10 @@ export function VideoScreen({ model }: { model: VideoModel }) {
         </span>
         <span fg={theme.dim}>{"   best "}</span>
         <span fg={theme.fg}>
-          {v.qualities[0]
-            ? `${v.qualities[0].label}${v.qualities[0].bytes ? ` ≈ ${bytes(v.qualities[0].bytes)}` : ""}`
-            : "?"}
+          {best ? `${best.label}${best.bytes ? ` ≈ ${bytes(best.bytes)}` : ""}` : "?"}
         </span>
         <span fg={existing ? theme.green : theme.dim}>
-          {existing ? `   ✓ already in ${tildify(ui.prefs.downloadDir)}` : ""}
+          {existing ? `   ✓ already in ${tildify(p.downloadDir)}` : ""}
         </span>
       </text>
       {v.playability.status !== "OK" ? (
@@ -216,18 +215,22 @@ export function VideoScreen({ model }: { model: VideoModel }) {
       <Line fg={theme.faint}>{"─".repeat(w)}</Line>
       {desc.map((line, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: static wrapped lines
-        <Line key={i} fg={theme.dim}>
-          {line || " "}
-        </Line>
+        <Line key={i}>{line || " "}</Line>
       ))}
-      {desc.length ? <Line fg={theme.faint}>{"─".repeat(w)}</Line> : null}
+      {cut ? <Line fg={theme.dim}>{"… m for full description"}</Line> : null}
+      <Line fg={theme.faint}>{"─".repeat(w)}</Line>
       <List
         rows={actions.map((a) => ({
           key: a.key,
-          text: `${a.key}  ${a.label.padEnd(16)} ${a.detail}`,
+          parts: [
+            { text: `${a.key}  `, fg: theme.accent, bold: true },
+            { text: a.label.padEnd(16) },
+            { text: a.detail, fg: theme.dim },
+          ],
         }))}
         cursor={model.cursor}
         height={actions.length}
+        width={w}
       />
     </box>
   );

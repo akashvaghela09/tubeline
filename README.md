@@ -44,11 +44,11 @@ yt-data          # full-screen app: paste a link or search, then download, trans
 ```
 
 Paste a link, `@handle` or id — or type to search — then use single keys: `d` download
-video, `a` audio, `t` transcript, `i` thumbnail, `c` channel. Browse channels and playlists
-in columns, filter with `/`, select several with `space` and download them in one go.
-Downloads run in the background with a live progress panel (size, speed, ETA). Folders,
-quality and formats are remembered; downloads default to your Downloads folder.
-`Esc` goes back, `Ctrl+C` quits.
+(opens a small panel with your defaults; `Enter` starts it), `a` audio, `t` transcript,
+`i` thumbnail, `c` channel. Browse channels and playlists in columns, filter with `/`,
+select several with `space` and download them in one go. Downloads run in the background
+with a live progress panel (size, speed, ETA). Pick a colour theme in Settings (`Ctrl+S`).
+`Esc`/`Backspace` go back, `Ctrl+C` returns Home (and quits from Home), `?` lists every key.
 
 ### Commands
 

@@ -28,6 +28,20 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 ### Added
 - `video` output: `qualities[]` — available qualities with estimated download size.
 
+- After a second (visual) review: one download key — `d`/`a` open a download panel
+  prefilled with your defaults (`Enter` downloads; quality/format/folder change in place;
+  "make these my defaults" is explicit), replacing `D`/`A`.
+- Themes: Auto (matches the terminal's light/dark background), Night, Day, Gruvbox,
+  Solarized Light, High contrast, plus Catppuccin Mocha, Nord, Dracula, GitHub Light;
+  live preview in Settings; `--theme` / `YT_DATA_THEME`.
+- Footer hints never cut mid-word and end with `? keys` (full key reference). Header shows
+  where you are and `↓ N running`. Lists keep fixed columns, 3-significant-digit counts,
+  a full-width cursor and a separate channel column in search.
+- Folder picker: resolved path, "will be created", recent folders, Tab completion.
+- `Ctrl+C` returns to Home and quits only from Home; `Backspace` goes back outside text
+  fields; `←`/`→` switch tabs (and the search type on an empty Home input).
+- Remembered folders that no longer exist fall back to the Downloads folder.
+
 ### Removed
 - The 0.2.0 prompt-based menus (@clack/prompts).
 

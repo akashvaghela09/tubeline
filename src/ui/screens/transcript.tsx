@@ -10,7 +10,7 @@ import { Line } from "../components.tsx";
 import { tildify, wrap } from "../format.ts";
 import type { TranscriptChoice } from "../prefs.ts";
 import { theme } from "../theme.ts";
-import { ScrollText, scrollKeys } from "./viewer.tsx";
+import { scrollKeys } from "./viewer.tsx";
 
 export interface TranscriptModel {
   videoId: string;
@@ -50,11 +50,9 @@ export function TranscriptScreen({ model }: { model: TranscriptModel }) {
   }, [videoId, lang, ui.services]);
 
   const w = Math.max(20, ui.width - 12);
-  const lines = t
+  const lines: { ts: string; text: string }[] = t
     ? t.segments.flatMap((s) =>
-        wrap(s.text, w).map(
-          (l, i) => `${i ? "        " : `${`[${shortClock(s.start)}]`.padEnd(8)}`}${l}`,
-        ),
+        wrap(s.text, w).map((l, i) => ({ ts: i ? "" : `[${shortClock(s.start)}]`, text: l })),
       )
     : [];
   const height = ui.bodyHeight - 1;
@@ -86,7 +84,7 @@ export function TranscriptScreen({ model }: { model: TranscriptModel }) {
     });
 
   useKeys([
-    ["s", `save ${ui.prefs.transcriptFormat} → ${tildify(ui.prefs.transcriptDir)}`],
+    ["s", "save"],
     ["S", "save as…"],
     ...(langs.length > 1 ? ([["l", "language"]] as [string, string][]) : []),
     ["↑↓ PgUp PgDn", "scroll"],
@@ -95,7 +93,7 @@ export function TranscriptScreen({ model }: { model: TranscriptModel }) {
 
   useKeyboard((key) => {
     if (key.ctrl || key.meta) return;
-    if (key.name === "escape") return ui.pop();
+    if (key.name === "escape" || key.name === "backspace") return ui.pop();
     if (key.name === "s" && !key.shift && t)
       return save(ui.prefs.transcriptFormat, ui.prefs.transcriptDir);
     if (key.name === "s" && key.shift && t) {
@@ -130,10 +128,26 @@ export function TranscriptScreen({ model }: { model: TranscriptModel }) {
   if (!t) return <Line fg={theme.dim}>Fetching transcript…</Line>;
   return (
     <box flexDirection="column">
-      <Line fg={theme.dim}>
-        {`${t.name ?? t.lang}${t.isTranslated ? " (translated)" : ""} · ${t.segments.length} lines${lines.length > height ? ` · ${top + 1}–${Math.min(lines.length, top + height)} of ${lines.length}` : ""}`}
-      </Line>
-      <ScrollText lines={lines} top={top} height={height} />
+      <text wrapMode="none" truncate>
+        <span fg={theme.fg}>{`${t.name ?? t.lang}${t.isTranslated ? " (translated)" : ""}`}</span>
+        <span fg={theme.dim}>
+          {` · ${t.segments.length} lines${lines.length > height ? ` · ${top + 1}–${Math.min(lines.length, top + height)} of ${lines.length}` : ""}`}
+        </span>
+        <span fg={theme.faint}>{"   "}</span>
+        <span fg={theme.accent}>s</span>
+        <span
+          fg={theme.dim}
+        >{` save ${ui.prefs.transcriptFormat} → ${tildify(ui.prefs.transcriptDir)}`}</span>
+      </text>
+      <box flexDirection="column">
+        {lines.slice(top, top + height).map((l, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: positional lines
+          <text key={top + i} wrapMode="none" truncate>
+            <span fg={theme.dim}>{l.ts.padEnd(8)}</span>
+            <span fg={theme.fg}>{l.text}</span>
+          </text>
+        ))}
+      </box>
     </box>
   );
 }

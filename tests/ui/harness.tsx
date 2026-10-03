@@ -9,6 +9,9 @@ import { JobQueue } from "../../src/ui/jobs.ts";
 import type { Prefs } from "../../src/ui/prefs.ts";
 import { fakeServices } from "./fake.ts";
 
+// savePrefs() writes ui.json under the data dir: never let tests touch the real one.
+process.env.XDG_DATA_HOME = mkdtempSync(join(tmpdir(), "yt-data-ui-home-"));
+
 export async function harness(
   opts: Parameters<typeof fakeServices>[0] & {
     width?: number;
@@ -20,6 +23,8 @@ export async function harness(
   const tmp = mkdtempSync(join(tmpdir(), "yt-data-ui-"));
   const prefs: Prefs = {
     recent: [],
+    recentDirs: [],
+    theme: "night",
     downloadDir: join(tmp, "dl"),
     videoQuality: "best",
     audioFormat: "mp3",

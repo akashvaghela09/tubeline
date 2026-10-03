@@ -9,7 +9,12 @@ export function registerUi(program: Command, getCtx: () => AppContext) {
     .description(
       "Interactive menus for people: paste a link or search, then download videos or audio, save transcripts or thumbnails, browse channels and playlists, update or check setup. Needs a terminal; for scripts and agents use the regular commands.",
     )
-    .action(async () => {
+    .option(
+      "--theme <name>",
+      "colour theme for this run (auto, night, day, gruvbox, solarized-light, high-contrast, …)",
+    )
+    .action(async (opts: { theme?: string }) => {
+      if (opts.theme) process.env.YT_DATA_THEME = opts.theme;
       if (!process.stdin.isTTY || !process.stdout.isTTY) {
         throw new CliError(
           "USAGE",

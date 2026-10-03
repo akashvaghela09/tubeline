@@ -12,30 +12,33 @@ import {
   useSyncExternalStore,
 } from "react";
 import type { Ref } from "../core/resolve.ts";
-import { bytes } from "../core/style.ts";
+import { bytes, width as textWidth, truncate } from "../core/style.ts";
 import type { ListType, SearchType } from "../sources/innertube.ts";
-import { Keys, Line } from "./components.tsx";
+import { fitHints, type Hint, Keys, Line } from "./components.tsx";
 import { clock, progressLine, tildify } from "./format.ts";
 import type { Job, JobQueue } from "./jobs.ts";
+import { KEY_REFERENCE } from "./keys.ts";
 import { type Prefs, savePrefs } from "./prefs.ts";
 import type { BrowseModel } from "./screens/browse.tsx";
 import { BrowseScreen, newBrowse } from "./screens/browse.tsx";
 import { type ChoiceOption, ChoiceScreen } from "./screens/choice.tsx";
+import { type DownloadModel, DownloadScreen } from "./screens/download.tsx";
 import { DownloadsScreen } from "./screens/downloads.tsx";
 import { HomeScreen } from "./screens/home.tsx";
-import { PromptScreen } from "./screens/prompt.tsx";
+import { type FolderModel, FolderScreen } from "./screens/prompt.tsx";
 import { SettingsScreen } from "./screens/settings.tsx";
 import { type TranscriptModel, TranscriptScreen } from "./screens/transcript.tsx";
 import { type VideoModel, VideoScreen } from "./screens/video.tsx";
 import { ViewerScreen } from "./screens/viewer.tsx";
 import type { UiServices } from "./services.ts";
-import { theme } from "./theme.ts";
+import { applyTheme, normalizeTheme, resolveTheme, type ThemeChoice, theme } from "./theme.ts";
 
 export type Screen =
   | { kind: "home" }
   | { kind: "video"; model: VideoModel }
   | { kind: "browse"; model: BrowseModel }
   | { kind: "transcript"; model: TranscriptModel }
+  | { kind: "download"; model: DownloadModel }
   | { kind: "viewer"; title: string; text: string }
   | {
       kind: "choice";
@@ -43,14 +46,10 @@ export type Screen =
       options: ChoiceOption[];
       initial?: number;
       onPick: (value: string) => void;
+      onHover?: (value: string) => void;
+      onCancel?: () => void;
     }
-  | {
-      kind: "prompt";
-      title: string;
-      initial: string;
-      hint?: string;
-      onSubmit: (value: string) => string | undefined;
-    }
+  | { kind: "folder"; model: FolderModel }
   | { kind: "settings"; model: { cursor: number } }
   | { kind: "downloads" };
 
@@ -67,13 +66,19 @@ export interface Ui {
   push(screen: Screen): void;
   pop(): void;
   toast(text: string, kind?: Toast["kind"]): void;
-  setKeys(keys: [string, string][]): void;
+  setKeys(keys: Hint[]): void;
+  /** Apply a theme now; `persist` saves it as the default. */
+  setTheme(choice: ThemeChoice, persist: boolean): void;
+  /** The terminal's own background, when it told us. */
+  terminalMode: "light" | "dark" | null;
   /** Rows available to the current screen's content. */
   bodyHeight: number;
   width: number;
   openRef(ref: Ref, label: string): void;
   openSearch(query: string, type: SearchType): void;
   openChannel(ref: Ref, tab?: ListType): void;
+  /** Update a recent item's label once we know what it resolved to. */
+  labelRecent(value: string, label: string): void;
 }
 
 const UiContext = createContext<Ui | null>(null);
@@ -84,8 +89,8 @@ export function useUi(): Ui {
   return ui;
 }
 
-/** Register the footer key hints for the current screen. */
-export function useKeys(keys: [string, string][]) {
+/** Register the footer key hints for the current screen, most important first. */
+export function useKeys(keys: Hint[]) {
   const ui = useUi();
   const sig = JSON.stringify(keys);
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed by content
@@ -101,15 +106,25 @@ export function App({
   prefs,
   jobs,
   onQuit,
+  terminalMode = null,
 }: {
   services: UiServices;
   prefs: Prefs;
   jobs: JobQueue;
   onQuit: () => void;
+  terminalMode?: "light" | "dark" | null;
 }) {
   const { width, height } = useTerminalDimensions();
   const [stack, setStack] = useState<Screen[]>([{ kind: "home" }]);
-  const [keys, setKeys] = useState<[string, string][]>([]);
+  const [themeKey, setThemeKey] = useState(() => {
+    const name = resolveTheme(
+      normalizeTheme(process.env.YT_DATA_THEME ?? prefs.theme),
+      terminalMode,
+    );
+    applyTheme(name);
+    return name;
+  });
+  const [keys, setKeys] = useState<Hint[]>([]);
   const [toast, setToast] = useState<Toast | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const quitArmed = useRef(0);
@@ -135,21 +150,22 @@ export function App({
     if (!failed || staleWarned.current) return;
     staleWarned.current = true;
     void services.ytDlpAge().then((age) => {
-      if (age !== null && age > 30)
+      if (age !== null && age > 30) {
         showToast(
-          `yt-dlp is ${age} days old, which often causes this — press Ctrl+U to update`,
+          `yt-data's downloader (yt-dlp) is ${age} days old — press Ctrl+U to update it`,
           "error",
         );
+      }
     });
   }, [jobList, services, showToast]);
 
   const panelJobs = pickPanelJobs(jobList);
-  const panelHeight = panelJobs.length ? panelJobs.length + 1 : 0;
-  const bodyHeight = Math.max(
-    3,
-    height - 2 /* header + rule */ - 2 /* footer + rule */ - (toast ? 1 : 0) - panelHeight,
-  );
+  const multi = jobList.filter((j) => j.status === "running" || j.status === "queued").length > 1;
+  const panelHeight = panelJobs.length ? panelJobs.length + (multi ? 1 : 0) : 0;
+  const bodyHeight = Math.max(3, height - 2 - 2 - (toast ? 1 : 0) - panelHeight);
 
+  // themeKey is a deliberate extra dependency: a new context object re-renders every screen.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see above
   const ui: Ui = useMemo(
     () => ({
       services,
@@ -160,6 +176,16 @@ export function App({
       pop,
       toast: showToast,
       setKeys,
+      terminalMode,
+      setTheme(choice, persist) {
+        const name = resolveTheme(choice, terminalMode);
+        applyTheme(name);
+        setThemeKey(name);
+        if (persist) {
+          prefs.theme = choice;
+          savePrefs(prefs);
+        }
+      },
       bodyHeight,
       width,
       openRef(ref, label) {
@@ -177,19 +203,32 @@ export function App({
       openChannel(ref, tab = "videos") {
         push({ kind: "browse", model: newBrowse({ kind: "channel", ref, tab }) });
       },
+      labelRecent(value, label) {
+        const item = prefs.recent.find((r) => r.kind === "ref" && r.value === value);
+        if (item && item.label !== label) {
+          item.label = label;
+          savePrefs(prefs);
+        }
+      },
     }),
-    [services, prefs, jobs, push, pop, showToast, bodyHeight, width],
+    [services, prefs, jobs, push, pop, showToast, bodyHeight, width, themeKey, terminalMode],
   );
 
   const top = stack[stack.length - 1] as Screen;
 
   useKeyboard((key) => {
-    if (KEYLOG)
+    if (KEYLOG) {
       appendFileSync(
         KEYLOG,
-        `${JSON.stringify({ t: Date.now(), screen: top.kind, name: key.name, seq: key.sequence, ctrl: key.ctrl, shift: key.shift, source: key.source, type: key.eventType })}\n`,
+        `${JSON.stringify({ t: Date.now(), screen: top.kind, name: key.name, seq: key.sequence, ctrl: key.ctrl, shift: key.shift })}\n`,
       );
+    }
     if (key.ctrl && key.name === "c") {
+      // Ctrl+C steps out to Home first; on Home it quits.
+      if (top.kind !== "home") {
+        setStack([{ kind: "home" }]);
+        return;
+      }
       const active = jobs.active();
       if (active.length && Date.now() - quitArmed.current > 3000) {
         quitArmed.current = Date.now();
@@ -206,41 +245,31 @@ export function App({
     if (key.ctrl && key.name === "o" && top.kind !== "downloads") push({ kind: "downloads" });
     if (key.ctrl && key.name === "s" && top.kind !== "settings")
       push({ kind: "settings", model: { cursor: 0 } });
-    if (key.ctrl && key.name === "k") {
-      showToast("Checking setup…");
-      void services.doctor().then((text) => push({ kind: "viewer", title: "Setup check", text }));
-    }
-    if (key.ctrl && key.name === "u") {
-      showToast("Updating yt-data and yt-dlp…");
-      void services
-        .update()
-        .then((text) => {
-          showToast(text.trim().split("\n")[0] ?? "Updated", "ok");
-          push({
-            kind: "viewer",
-            title: "Update",
-            text: `${text}\nRestart yt-data to use a new yt-data version.`,
-          });
-        })
-        .catch((err: Error) => showToast(err.message, "error"));
+    if (key.ctrl && key.name === "k") checkSetup(ui);
+    if (key.ctrl && key.name === "u") updateAll(ui);
+    // "?" shows every key, except while typing into a field.
+    if (
+      key.sequence === "?" &&
+      !key.ctrl &&
+      !TYPING.has(top.kind) &&
+      !(top.kind === "browse" && top.model.filtering)
+    ) {
+      push({ kind: "viewer", title: "Keys", text: KEY_REFERENCE });
     }
   });
 
-  const crumbs = stack.map(crumb).filter(Boolean).join(" › ");
-  const defaults = `${tildify(prefs.downloadDir)} · ${prefs.videoQuality} · ${prefs.audioFormat}`;
+  const crumbs = stack.map(crumb).filter(Boolean);
+  const status = jobStatus(jobList);
+  const footer = fitHints(
+    [...keys, ...(top.kind === "home" ? ([["^C", "quit"]] as Hint[]) : [])],
+    [["?", "keys"]],
+    width - 2,
+  );
 
   return (
     <UiContext.Provider value={ui}>
-      <box flexDirection="column" width="100%" height="100%">
-        <text wrapMode="none" truncate>
-          <span fg={theme.accent}>
-            <strong> yt-data </strong>
-          </span>
-          <span fg={theme.dim}>{services.version} </span>
-          <span fg={theme.fg}>{crumbs ? ` ${crumbs}` : ""}</span>
-          <span fg={theme.faint}>{"  "}</span>
-          <span fg={theme.dim}>{width > 100 ? defaults : ""}</span>
-        </text>
+      <box flexDirection="column" width="100%" height="100%" backgroundColor={theme.bg}>
+        <Header crumbs={crumbs} status={status} width={width} />
         <Line fg={theme.faint}>{"─".repeat(width)}</Line>
         <box flexDirection="column" flexGrow={1} paddingLeft={1} paddingRight={1}>
           <ScreenView screen={top} />
@@ -252,14 +281,85 @@ export function App({
             {` ${toast.kind === "error" ? "✗" : toast.kind === "ok" ? "✓" : "•"} ${toast.text}`}
           </Line>
         ) : null}
-        {panelJobs.length ? <JobsPanel jobs={panelJobs} all={jobList} width={width} /> : null}
+        {panelJobs.length ? (
+          <JobsPanel jobs={panelJobs} all={jobList} width={width} showSummary={multi} />
+        ) : null}
         <Line fg={theme.faint}>{"─".repeat(width)}</Line>
         <box paddingLeft={1}>
-          <Keys keys={[...keys, ["^O", "downloads"], ["^S", "settings"], ["^C", "quit"]]} />
+          <Keys keys={footer} />
         </box>
       </box>
     </UiContext.Provider>
   );
+}
+
+/** Screens where printable keys go into a text field. */
+const TYPING = new Set<Screen["kind"]>(["home", "folder"]);
+
+function checkSetup(ui: Ui) {
+  ui.toast("Checking setup…");
+  void ui.services.doctor().then((text) => ui.push({ kind: "viewer", title: "Setup check", text }));
+}
+
+function updateAll(ui: Ui) {
+  ui.toast("Updating yt-data and its downloader (yt-dlp)…");
+  void ui.services
+    .update()
+    .then((text) => {
+      ui.toast(text.trim().split("\n")[0] ?? "Updated", "ok");
+      ui.push({
+        kind: "viewer",
+        title: "Update",
+        text: `${text}\nRestart yt-data to use a new yt-data version.`,
+      });
+    })
+    .catch((err: Error) => ui.toast(err.message, "error"));
+}
+
+export const actions = { checkSetup, updateAll };
+
+/** "yt-data › Marques Brownlee › Xiaomi 18 Pro Max › transcript" with live job status on the right. */
+function Header({ crumbs, status, width }: { crumbs: string[]; status: string; width: number }) {
+  const room = Math.max(10, width - 2 - 8 - (status ? textWidth(status) + 3 : 0));
+  const parts = [...crumbs];
+  // Shorten the longest crumb first, only as much as needed.
+  for (let guard = 0; guard < 20; guard++) {
+    const total = parts.reduce((a, p) => a + textWidth(p) + 3, 0);
+    if (total <= room || !parts.length) break;
+    let longest = 0;
+    parts.forEach((p, i) => {
+      if (textWidth(p) > textWidth(parts[longest] ?? "")) longest = i;
+    });
+    const p = parts[longest] as string;
+    parts[longest] = truncate(p, Math.max(6, textWidth(p) - (total - room)));
+  }
+  const left = 1 + 7 + parts.reduce((a, p) => a + 3 + textWidth(p), 0);
+  return (
+    <text wrapMode="none" truncate>
+      <span fg={theme.accent}>
+        <strong> yt-data</strong>
+      </span>
+      {parts.map((p, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: positional crumbs
+        <span key={i}>
+          <span fg={theme.faint}> › </span>
+          <span fg={i === parts.length - 1 ? theme.fg : theme.dim}>{p}</span>
+        </span>
+      ))}
+      {status ? (
+        <span fg={theme.accent}>
+          {" ".repeat(Math.max(2, width - left - textWidth(status) - 1)) + status}
+        </span>
+      ) : null}
+    </text>
+  );
+}
+
+function jobStatus(all: readonly Job[]): string {
+  const running = all.filter((j) => j.status === "running").length;
+  const queued = all.filter((j) => j.status === "queued").length;
+  if (!running && !queued) return "";
+  return `↓ ${running} running${queued ? ` · ${queued} queued` : ""}`;
 }
 
 function ScreenView({ screen }: { screen: Screen }) {
@@ -272,6 +372,8 @@ function ScreenView({ screen }: { screen: Screen }) {
       return <BrowseScreen model={screen.model} />;
     case "transcript":
       return <TranscriptScreen model={screen.model} />;
+    case "download":
+      return <DownloadScreen model={screen.model} />;
     case "viewer":
       return <ViewerScreen title={screen.title} text={screen.text} />;
     case "choice":
@@ -281,17 +383,12 @@ function ScreenView({ screen }: { screen: Screen }) {
           options={screen.options}
           initial={screen.initial}
           onPick={screen.onPick}
+          onHover={screen.onHover}
+          onCancel={screen.onCancel}
         />
       );
-    case "prompt":
-      return (
-        <PromptScreen
-          title={screen.title}
-          initial={screen.initial}
-          hint={screen.hint}
-          onSubmit={screen.onSubmit}
-        />
-      );
+    case "folder":
+      return <FolderScreen model={screen.model} />;
     case "settings":
       return <SettingsScreen model={screen.model} />;
     case "downloads":
@@ -304,24 +401,24 @@ function crumb(s: Screen): string {
     case "home":
       return "";
     case "video":
-      return s.model.video ? short(s.model.video.title) : "video";
+      return s.model.video?.title ?? "video";
     case "browse":
-      return short(s.model.title);
+      return s.model.title;
     case "transcript":
       return "transcript";
+    case "download":
+      return "download";
     case "viewer":
       return s.title.toLowerCase();
     case "settings":
       return "settings";
     case "downloads":
       return "downloads";
-    default:
+    case "folder":
+      return "folder";
+    case "choice":
       return "";
   }
-}
-
-function short(s: string): string {
-  return s.length > 28 ? `${s.slice(0, 27)}…` : s;
 }
 
 /** Running first, then queued, then the most recent finished ones, up to PANEL_MAX. */
@@ -338,22 +435,29 @@ function pickPanelJobs(all: readonly Job[]): Job[] {
   return [...running, ...queued, ...recent].slice(0, PANEL_MAX);
 }
 
-function JobsPanel({ jobs, all, width }: { jobs: Job[]; all: readonly Job[]; width: number }) {
-  const running = all.filter((j) => j.status === "running").length;
-  const queued = all.filter((j) => j.status === "queued").length;
-  const done = all.filter((j) => j.status === "done").length;
-  const failed = all.filter((j) => j.status === "failed").length;
+function JobsPanel({
+  jobs,
+  all,
+  width,
+  showSummary,
+}: {
+  jobs: Job[];
+  all: readonly Job[];
+  width: number;
+  showSummary: boolean;
+}) {
+  const count = (s: Job["status"]) => all.filter((j) => j.status === s).length;
   const summary = [
-    running && `${running} running`,
-    queued && `${queued} queued`,
-    done && `${done} done`,
-    failed && `${failed} failed`,
+    count("running") && `${count("running")} running`,
+    count("queued") && `${count("queued")} queued`,
+    count("done") && `${count("done")} done`,
+    count("failed") && `${count("failed")} failed`,
   ]
     .filter(Boolean)
     .join(" · ");
   return (
     <box flexDirection="column">
-      <Line fg={theme.dim}>{` Downloads  ${summary}`}</Line>
+      {showSummary ? <Line fg={theme.dim}>{` Downloads  ${summary}  ·  ^O all`}</Line> : null}
       {jobs.map((j) => (
         <JobLine key={j.key} job={j} width={width} />
       ))}
@@ -363,28 +467,33 @@ function JobsPanel({ jobs, all, width }: { jobs: Job[]; all: readonly Job[]; wid
 
 export function JobLine({ job, width, selected }: { job: Job; width: number; selected?: boolean }) {
   const cols = Math.max(20, width - 4);
-  const label = job.kind === "video" || job.kind === "audio" ? job.kind : job.kind;
+  const media = job.kind === "video" || job.kind === "audio";
   let icon = "·";
   let color: string = theme.dim;
   let text = "";
   if (job.status === "running") {
     icon = "◆";
     color = theme.accent;
-    text =
-      (job.kind === "video" || job.kind === "audio") && job.progress
-        ? progressLine(job.progress, job.kind, job.title, cols)
-        : `${label}…  ${job.title}`;
-    if ((job.kind === "video" || job.kind === "audio") && !job.progress)
-      text = `  0% fetching formats  ${job.title}`;
+    if (media && job.progress)
+      text = progressLine(job.progress, job.kind as "video" | "audio", job.title, cols);
+    else if (media)
+      text = `  0% ${"─".repeat(Math.min(30, Math.floor(cols / 5)))}  fetching formats  ${job.title}`;
+    else text = `${job.kind}…  ${job.title}`;
   } else if (job.status === "queued") {
-    text = `queued  ${label}  ${job.title}`;
+    text = `queued  ${job.kind}  ${job.title}`;
   } else if (job.status === "done") {
     icon = "✓";
     color = theme.green;
     const took =
       job.startedAt && job.finishedAt ? clock((job.finishedAt - job.startedAt) / 1000) : "";
     const size = job.bytes !== null ? bytes(job.bytes) : "";
-    text = [job.note ?? label, size, took, job.path ? tildify(job.path) : job.title]
+    text = [
+      job.note ?? "saved",
+      job.path ? tildify(job.path) : job.title,
+      size,
+      took,
+      selected ? "" : "· ^O to open folder",
+    ]
       .filter(Boolean)
       .join("  ");
   } else if (job.status === "failed") {
@@ -417,9 +526,8 @@ function refString(ref: Ref): string {
 }
 
 function addRecentAndSave(prefs: Prefs, item: Prefs["recent"][number]) {
-  prefs.recent = [
-    item,
-    ...prefs.recent.filter((r) => !(r.kind === item.kind && r.value === item.value)),
-  ].slice(0, 8);
+  const existing = prefs.recent.find((r) => r.kind === item.kind && r.value === item.value);
+  const next = existing ? { ...item, label: existing.label } : item;
+  prefs.recent = [next, ...prefs.recent.filter((r) => r !== existing)].slice(0, 8);
   savePrefs(prefs);
 }

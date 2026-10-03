@@ -16,9 +16,19 @@ export async function runWith(services: UiServices): Promise<void> {
   const prefs = loadPrefs();
   const jobs = new JobQueue(services);
   const renderer = await createCliRenderer({ exitOnCtrlC: false, targetFps: 30 });
+  // For the "auto" theme: ask the terminal whether its background is light or dark.
+  const terminalMode = await renderer.waitForThemeMode(300).catch(() => null);
   const root = createRoot(renderer);
   await new Promise<void>((resolve) => {
-    root.render(<App services={services} prefs={prefs} jobs={jobs} onQuit={resolve} />);
+    root.render(
+      <App
+        services={services}
+        prefs={prefs}
+        jobs={jobs}
+        onQuit={resolve}
+        terminalMode={terminalMode}
+      />,
+    );
   });
   root.unmount();
   renderer.destroy();

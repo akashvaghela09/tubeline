@@ -23,7 +23,7 @@ export function DownloadsScreen() {
   ]);
   useKeyboard((key) => {
     if (key.ctrl || key.meta) return;
-    if (key.name === "escape") return ui.pop();
+    if (key.name === "escape" || key.name === "backspace") return ui.pop();
     if (key.name === "up") setCursor(Math.max(0, c - 1));
     if (key.name === "down") setCursor(Math.min(jobs.length - 1, c + 1));
     if (key.name === "x" && key.shift) ui.jobs.cancelAll();

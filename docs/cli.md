@@ -256,36 +256,50 @@ required, since only `download` and the transcript fallback need them.
 
 Full-screen interactive app for people — also what plain `yt-data` opens at a terminal.
 Built on OpenTUI (native renderer, redraws only on change). Needs an interactive terminal;
-scripts and agents use the regular commands with `--json`.
+scripts and agents use the regular commands with `--json`. Press **`?`** anywhere for every
+key.
 
-**Home** — one input: paste a URL, `@handle` or id to open it, or type words to search
-(`Tab` cycles videos / shorts / channels / playlists). `↓` reaches recent items, Settings and
-Downloads.
+**Home** — one input: paste a URL, `@handle` or id to open it, or type words to search.
+`Tab` (or `←`/`→` while the input is empty) switches videos / shorts / channels /
+playlists. `↓` reaches recent items, which show what they resolved to.
 
 **Video** — card with views, likes, length, date, caption languages, best quality with an
-estimated size, and "✓ already in <folder>" when you have it. Keys:
-`d` download video (remembered quality/folder) · `D` choose quality & folder ·
-`a` audio (remembered format) · `A` choose format & folder · `t` transcript · `i` thumbnail ·
-`c` channel · `m` details · `o` open in browser.
+estimated size, and "✓ already in <folder>" when you have it. Keys: `d` download ·
+`a` download audio · `t` transcript · `i` thumbnail · `c` channel · `m` details ·
+`o` open in browser.
 
-**Browse** (channel, playlist, search results) — columns: length, views, age, title.
-`Enter` open · `space` select · `*` select all shown · `/` filter · `Tab` next tab
-(videos / shorts / streams / all, or result type) · `d`/`a`/`t`/`i` act on the selection, or
-on the highlighted row when nothing is selected. More results load as you scroll; the
-list, filter and position are kept when you come back.
+**Download panel** — `d` / `a` open it filled with your remembered defaults, so `d` `Enter`
+downloads. `↑↓` pick a field, `←→` change it (quality with estimated size, audio format, a
+recent folder), `Tab` switches video/audio, `e` types a folder (Tab completes, new folders
+are created), `space` ticks "make these my defaults" — off by default, so a one-off choice
+doesn't change your defaults. Warns when the file is already in that folder.
+
+**Browse** (channel, playlist, search results) — columns: length, views, age, title (and
+channel for search). `Enter` open · `space` select · `*` select all shown · `/` filter ·
+`←`/`→` or `Tab` switch tab · `d`/`a` open the download panel for the selection (or the
+highlighted row) · `t` save transcripts · `i` save thumbnails. More results load as you
+scroll; the list, filter and position are kept when you come back.
 
 **Transcript** — readable, scrollable; `s` saves in the remembered format/folder, `S` asks,
 `l` switches language.
 
 **Downloads** — run one at a time in the background while you keep browsing. A panel shows
 `42% ━━━━╸── 4.2/10 MB  2.1 MB/s  ETA 0:05  video 1/2  title…`, then `merging` /
-`converting`, then `✓ size, time, path`. `Ctrl+O` lists every job: `x` cancel (partial files
-are removed), `X` cancel all, `r` retry, `o` open the folder. If a download fails and yt-dlp
-is outdated, the app says so and `Ctrl+U` updates it.
+`converting`, then `✓ saved <path>, size, time`. The header shows `↓ N running` while busy.
+`Ctrl+O` lists every job: `x` cancel (partial files are removed), `X` cancel all, `r` retry,
+`o` open the folder. If a download fails and yt-dlp is outdated, the app says so and
+`Ctrl+U` updates it.
 
-**Everywhere** — `Esc` back · `Ctrl+S` settings (folders, quality, formats) · `Ctrl+U`
-update yt-data & yt-dlp · `Ctrl+K` check setup · `Ctrl+C` quit (asks first while downloads
-run). On exit, the files saved in the session are listed in your terminal.
+**Everywhere** — `Esc` or `Backspace` back (Backspace edits text while you type) ·
+`Ctrl+C` returns to Home; on Home it quits (asks first while downloads run) · `Ctrl+S`
+settings · `Ctrl+U` update yt-data & yt-dlp · `Ctrl+K` check setup · `?` keys. On exit,
+the files saved in the session are listed in your terminal.
+
+**Themes** — Settings › Appearance › Theme, previewed live as you move through the list:
+Auto (default: Night or Day to match your terminal's background), Night, Day, Gruvbox,
+Solarized Light, High contrast, and more (Catppuccin Mocha, Nord, Dracula, GitHub Light).
+Every theme paints its own background. Override per run with `yt-data ui --theme <name>`
+or `YT_DATA_THEME`.
 
 Defaults: downloads go to your Downloads folder; choices are remembered in
 `~/.local/share/yt-data/ui.json`.
@@ -361,6 +375,7 @@ session (3 days). Listings are never cached. Entries are discarded when yt-data 
 | `YT_DATA_COOKIES_FROM_BROWSER` | Like `--cookies-from-browser` |
 | `YT_DATA_PROXY` | Like `--proxy` |
 | `YT_DATA_LOG` | `silent`, `error`, `warn` (default), `info`, `debug` |
+| `YT_DATA_THEME` | Interactive app theme for this run (`auto`, `night`, `day`, …) |
 | `GITHUB_TOKEN` | Optional; raises GitHub API limits for `update` |
 
 Config file keys: `format`, `region`, `cookies`, `cookiesFromBrowser`, `proxy`, `cacheDir`,
