@@ -4,10 +4,15 @@ Agent-friendly CLI for YouTube data. Start here; `yt-data <command> --help` has 
 options, `yt-data schema <name>` prints JSON Schemas, and `man yt-data` works after
 `yt-data docs --install-man`.
 
+**Agents and scripts:** pass `--json` (or just pipe the output — JSON is the default
+whenever stdout isn't a terminal). Commands never prompt. People at a terminal get
+readable output by default, and plain `yt-data` opens interactive menus (`yt-data ui`).
+
 ## Synopsis
 
 ```
 yt-data <command> [options] [refs...]
+yt-data            # interactive menus, at a terminal
 ```
 
 `ref` = video/channel/playlist URL, `youtu.be/<id>`, `@handle`, `UC…` channel id,
@@ -17,7 +22,8 @@ yt-data <command> [options] [refs...]
 
 | Option | Default | Description |
 |---|---|---|
-| `-f, --format <fmt>` | `json` | `json`, `ndjson`, `table`, `csv` |
+| `--json` | | JSON output (same as `--format json`) |
+| `-f, --format <fmt>` | `human` at a terminal, else `json` | `human`, `json`, `ndjson`, `table`, `csv` |
 | `--fields <list>` | all | Comma-separated fields to keep, dot paths allowed (`channel.name`) |
 | `--no-cache` | | Don't read or write cached data |
 | `--refresh` | | Ignore cached results but store fresh ones |
@@ -84,6 +90,36 @@ yt-data videos @mkbhd --since 30d --full --fields id,title,publishedAt,likeCount
 yt-data videos https://www.youtube.com/playlist?list=PLBsP89CPrMeO7uztAu6YxSB10cRMpjgiY
 ```
 
+### `search <query...>`
+
+Search YouTube. Every result has a `type` — `video`, `channel` or `playlist` — and the same
+ids/URLs the other commands take.
+
+| Option | Default | Description |
+|---|---|---|
+| `-t, --type <t>` | `video` | `video`, `shorts`, `channel`, `playlist`, `all` |
+| `-s, --sort <s>` | `relevance` | `relevance`, `popularity` |
+| `--duration <d>` | | `short` (<3 min), `medium` (3–20), `long` (>20) |
+| `--uploaded <when>` | | `today`, `week`, `month`, `year` |
+| `--features <list>` | | `hd`, `4k`, `subtitles`, `creative_commons`, `live`, `hdr`, `360`, `vr180`, `3d`, `location` |
+| `-n, --limit <n>` | `20` | Max results; `0` = all pages |
+
+Video results: `type`, `id`, `url`, `title`, `channel{id,name,handle,isVerified}`,
+`durationSeconds`, `viewCount` + `viewCountText`, `publishedText`, `publishedAtApprox`,
+`isLive`, `isUpcoming`, `isShort`, `description` (snippet), `thumbnail`.
+Channel results: `type`, `id`, `url`, `name`, `handle`, `subscriberCount` +
+`subscriberCountText`, `videoCount`, `isVerified`, `description`, `avatar`.
+Playlist results: `type`, `id`, `url`, `title`, `channelName`, `videoCount`, `updatedText`,
+`thumbnail`.
+
+```
+yt-data search mkbhd iphone review
+yt-data search "lofi hip hop" --type playlist -n 5
+yt-data search mkbhd --type channel --json --fields id,name,subscriberCount
+yt-data search "rust tutorial" --duration long --uploaded year --sort popularity
+yt-data search cats --type shorts --json | jq -r '.[].id' | yt-data download - --quality 720p
+```
+
 ### `video <ref...>`
 
 Full metadata for one or more videos.
@@ -114,7 +150,7 @@ translation).
 |---|---|---|
 | `-l, --lang <code>` | English if available, else the first track | Caption language (`en`, `pt-BR`, …; base language matches, e.g. `en` → `en-US`) |
 | `--prefer <p>` | `manual` | `manual` or `auto` (auto-generated) when both exist |
-| `--as <fmt>` | `json` | `json`, `txt`, `vtt`, `srt` |
+| `--as <fmt>` | `json` (readable view at a terminal without `-o`) | `json`, `txt`, `vtt`, `srt` |
 | `--timestamps` | | Prefix each `txt` line with `[mm:ss]` |
 | `--list` | | List caption tracks: `{videoId, tracks[{lang,name,isAuto,isTranslatable}]}` |
 | `-o, --output <path>` | stdout | File (one ref) or directory (several refs → `<id>.<lang>.<ext>`) |
@@ -215,6 +251,24 @@ table` prints just the checks). Exit 0 when every required check passes, otherwi
 exit code of the first failing required check. yt-dlp and ffmpeg are reported but not
 required, since only `download` and the transcript fallback need them.
 
+### `ui`
+
+Interactive menus for people — also what plain `yt-data` opens at a terminal. Paste a
+link, @handle or id (or search), then:
+
+- **Video:** download video (pick quality) or audio (mp3 / m4a / opus) with a progress bar,
+  view or save the transcript (pick language and format), download the thumbnail, show
+  details, jump to the channel.
+- **Channel / playlist:** browse videos, shorts, live streams or all uploads in a
+  type-to-filter list (50 at a time, "load more"), open one, or **select several** to
+  download them, save their transcripts or thumbnails in one go.
+- **Update** yt-data and yt-dlp, **check setup** (doctor).
+
+Downloads default to your Downloads folder. Folder, quality and formats you pick are
+remembered for next time (`~/.local/share/yt-data/ui.json`). Esc / Ctrl+C goes back one
+level; at the main menu it quits. Needs an interactive terminal — use the regular
+commands in scripts.
+
 ### `schema [name]`
 
 JSON Schema (draft 2020-12) of an output shape. Without a name, lists them:
@@ -237,10 +291,15 @@ yt-data schema --all > schemas.json
 
 ## Output and errors
 
+- **Output mode:** at a terminal the default is `human` — readable cards and tables (e.g.
+  `21.3M subscribers · 1,856 videos`). When stdout is not a terminal (pipes, agents,
+  `$(…)`) or with `--json`, it is JSON. Pick explicitly with `--format`. `--fields` with
+  `human` shows a table of just those fields.
 - Data → stdout. Logs, progress, warnings → stderr.
 - One ref → a JSON object. Several refs (or `-`) → a JSON array, in input order.
   `--format ndjson` always prints one object per line.
 - JSON is pretty-printed when stdout is a terminal and compact otherwise.
+- `NO_COLOR` disables colors in human output.
 - Counts are integers. Abbreviated display values ("21.3M") are parsed and approximate;
   the original text is kept in the matching `…Text` field.
 - With several refs, failures don't stop the others: successful results still go to stdout,
@@ -248,6 +307,8 @@ yt-data schema --all > schemas.json
   that of the first failure.
 - Errors → non-zero exit and one JSON line on stderr:
   `{"error":{"code":"NOT_FOUND","message":"Video dQw4w9WgXcX not found","hint":null}}`
+  In human mode at a terminal the same error reads `✗ Video … not found` with a `→ hint`
+  line; the exit code is the same.
 
 | Exit | Code | Meaning |
 |---|---|---|

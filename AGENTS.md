@@ -19,7 +19,11 @@ via `youtubei.js`; downloads via a `yt-dlp` subprocess. Plan and roadmap:
 
 ## Rules
 
-- The output contract in `docs/plan.md` §5 is a public API. stdout carries data only;
+- The JSON output contract (`docs/plan.md` §5) is a public API. Human output (`--format
+  human`, the default at a terminal) and `src/ui/` are for people and may change freely, but
+  must never appear when stdout isn't a terminal or with `--json`. Commands never prompt;
+  only `yt-data ui` (or bare `yt-data` at a terminal) is interactive.
+- Branches: develop on `dev`; `main` is what's released; `version-1` holds the v0.1.x line. stdout carries data only;
   logs go to stderr; never prompt; map failures to the typed error codes/exit codes.
 - zod schemas in `src/models/` are the single source of truth for output types and the
   `schema` command. Change a model → update `docs/cli.md` if user-visible.

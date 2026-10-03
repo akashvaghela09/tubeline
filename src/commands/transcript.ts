@@ -4,6 +4,7 @@ import { type Command, Option } from "commander";
 import { TEXT_FORMATS, type TextFormat, toSrt, toTxt, toVtt } from "../core/captions.ts";
 import type { AppContext } from "../core/context.ts";
 import { CliError } from "../core/errors.ts";
+import { trackListHuman, transcriptFileHuman, transcriptHuman } from "../core/human.ts";
 import { parseRef, refKindLabel } from "../core/resolve.ts";
 import { expandRefs, runForRefs } from "../core/run.ts";
 import type { Transcript } from "../models/video.ts";
@@ -12,7 +13,7 @@ import { getTranscript, type Prefer } from "../services/transcript.ts";
 interface TranscriptOptions {
   lang?: string;
   prefer: Prefer;
-  as: TextFormat;
+  as?: TextFormat;
   timestamps?: boolean;
   list?: boolean;
   output?: string;
@@ -38,9 +39,10 @@ export function registerTranscript(program: Command, getCtx: () => AppContext) {
         .default("manual"),
     )
     .addOption(
-      new Option("--as <fmt>", "output format of the transcript")
-        .choices(TEXT_FORMATS)
-        .default("json"),
+      new Option(
+        "--as <fmt>",
+        "transcript format (default: json; at a terminal without -o, a readable view)",
+      ).choices(TEXT_FORMATS),
     )
     .option("--timestamps", "prefix each line with [mm:ss] (with --as txt)")
     .option("--list", "list available caption tracks instead")
@@ -73,7 +75,7 @@ With -o, stdout gets one JSON record per file written: {videoId, lang, path}.`,
       };
 
       if (opts.list) {
-        await runForRefs(ctx, refs, opts, async (ref) => {
+        await runForRefs(ctx, refs, { ...opts, human: trackListHuman }, async (ref) => {
           const id = videoId(ref);
           const tracks = await (await ctx.innertube()).getCaptionTracks(id);
           return { videoId: id, tracks: tracks.map(({ baseUrl: _, ...t }) => t) };
@@ -81,9 +83,11 @@ With -o, stdout gets one JSON record per file written: {videoId, lang, path}.`,
         return;
       }
 
+      const readable = opts.as === undefined && !opts.output && ctx.config.format === "human";
+      opts.as ??= "json";
       const expanded = await expandRefs(refs);
       const many = expanded.length > 1 || refs.includes("-");
-      if (many && !opts.output && opts.as !== "json") {
+      if (many && !opts.output && opts.as !== "json" && !readable) {
         throw new CliError(
           "USAGE",
           `--as ${opts.as} with several videos needs -o <dir>`,
@@ -107,17 +111,27 @@ With -o, stdout gets one JSON record per file written: {videoId, lang, path}.`,
       if (opts.output) {
         const out = opts.output;
         if (many) mkdirSync(out, { recursive: true });
-        await runForRefs(ctx, expanded, { ...opts, fields: undefined }, async (ref) => {
-          const t = await fetchOne(ref);
-          const path = many ? join(out, `${t.videoId}.${t.lang}.${opts.as}`) : out;
-          writeFileSync(path, renderTranscript(t, opts));
-          return { videoId: t.videoId, lang: t.lang, path };
-        });
+        await runForRefs(
+          ctx,
+          expanded,
+          { ...opts, fields: undefined, human: transcriptFileHuman },
+          async (ref) => {
+            const t = await fetchOne(ref);
+            const path = many ? join(out, `${t.videoId}.${t.lang}.${opts.as}`) : out;
+            writeFileSync(path, renderTranscript(t, opts));
+            return { videoId: t.videoId, lang: t.lang, path };
+          },
+        );
         return;
       }
 
       if (opts.as === "json") {
-        await runForRefs(ctx, refs, opts, fetchOne);
+        await runForRefs(
+          ctx,
+          refs,
+          readable ? { ...opts, human: transcriptHuman } : opts,
+          fetchOne,
+        );
         return;
       }
       const t = await fetchOne(expanded[0] as string);
@@ -136,7 +150,7 @@ function renderTranscript(
       return toVtt(t.segments);
     case "srt":
       return toSrt(t.segments);
-    case "json":
+    default:
       return `${JSON.stringify(t)}\n`;
   }
 }

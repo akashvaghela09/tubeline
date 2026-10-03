@@ -1,6 +1,7 @@
 import { type Command, Option } from "commander";
 import type { AppContext } from "../core/context.ts";
-import { CliError, toCliError } from "../core/errors.ts";
+import { CliError, formatError, toCliError } from "../core/errors.ts";
+import { videoHuman, videoListHuman } from "../core/human.ts";
 import { createListWriter, parseFields } from "../core/output.ts";
 import { parseSince } from "../core/parse.ts";
 import { parseRef } from "../core/resolve.ts";
@@ -93,6 +94,7 @@ Output schema: yt-data schema videos (with --full: yt-data schema video)`,
         format: ctx.config.format,
         fields,
         pretty: process.stdout.isTTY,
+        human: opts.full ? videoHuman : videoListHuman,
       });
       const items = source.listVideos(ref, { type: opts.type, sort: opts.sort });
 
@@ -130,7 +132,7 @@ Output schema: yt-data schema videos (with --full: yt-data schema video)`,
               if (!r.ok) {
                 const err = toCliError(r.e);
                 firstError ??= err;
-                process.stderr.write(`${JSON.stringify(err.toJSON(r.id))}\n`);
+                process.stderr.write(formatError(err, r.id));
                 continue;
               }
               if (!emit(r.v, r.v.publishedAt)) return false;

@@ -4,6 +4,7 @@ import { type Command, Option } from "commander";
 import type { AppContext } from "../core/context.ts";
 import { CliError } from "../core/errors.ts";
 import type { FetchFn } from "../core/http.ts";
+import { thumbnailHuman } from "../core/human.ts";
 import { parseRef, refKindLabel } from "../core/resolve.ts";
 import { runForRefs } from "../core/run.ts";
 
@@ -50,7 +51,7 @@ Output: {id, quality, url, width, height, path, sizeBytes} (path/sizeBytes are n
     .action(async (refs: string[], opts: ThumbnailOptions) => {
       const ctx = getCtx();
       if (!opts.urlOnly) mkdirSync(opts.output, { recursive: true });
-      await runForRefs(ctx, refs, opts, async (ref) => {
+      await runForRefs(ctx, refs, { ...opts, human: thumbnailHuman }, async (ref) => {
         const parsed = parseRef(ref);
         if (parsed.kind !== "video")
           throw new CliError("USAGE", `"${ref}" is a ${refKindLabel(parsed)}, not a video`);

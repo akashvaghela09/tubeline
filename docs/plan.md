@@ -1,6 +1,6 @@
 # yt-data — Project Plan
 
-Status: **v0.1.0 released** — phases 0–7 done · Last updated: 2026-10-03
+Status: **v0.2.0 in progress on `dev`** — v0.1.x on `version-1` · Last updated: 2026-10-03
 
 ## 1. Goal
 
@@ -285,7 +285,8 @@ Precedence: flag > env > config file > default.
 | 5 | `update` (self + yt-dlp), update notices | ✅ |
 | 6 | Docs: man page, `docs`, `schema`, README polish | ✅ |
 | 7 | CI + release pipeline, `install.sh` | ✅ v0.1.0 (install.sh + self-update verified on Linux) |
-| Later | search, comments, playlists CRUD, Data API v3 backend, Whisper, MCP server, Playwright fallback | — |
+| 8 (v0.2) | Human output by default at a terminal, `--json`; `search`; interactive menus (`yt-data ui`) | ✅ on `dev` |
+| Later | comments, Data API v3 backend, Whisper, MCP server, Playwright fallback | — |
 
 ## 14. Risks
 
@@ -297,7 +298,21 @@ Precedence: flag > env > config file > default.
 | `bun --compile` incompatibilities | Keep deps minimal; CI smoke test the binary |
 | Self-update corrupting the binary | Checksum + temp file + atomic rename; refuse when not writable |
 
-## 15. Resolved questions
+## 15. v0.2 design notes
+
+- Output mode is chosen once: `--format` > `--json` > config `format` > (stdout is a TTY ?
+  `human` : `json`). Agents run without a TTY, so they keep getting JSON unchanged.
+- Human renderers live in `src/core/human.ts`; commands pass one to `runForRefs` /
+  `createListWriter`. With `--fields`, human mode falls back to a table.
+- Menus (`src/ui/`, @clack/prompts) call the same services as the commands (`InnertubeSource`,
+  `services/download.ts`, `services/transcript.ts`) — they never shell out to the CLI.
+  They're loaded lazily so scripted runs don't pay for them.
+- Search uses InnerTube `/search` filters as exposed by youtubei.js v18: `prioritize`
+  (relevance|popularity), `duration` buckets, `upload_date`, `features`, `type` incl. shorts.
+  Channel results put the handle in `subscriber_count` and subscribers in `video_count`;
+  texts are classified by content.
+
+## 16. Resolved questions
 
 - Releases: GitHub `akashvaghela09/yt-data`, default branch `main`.
 - License: MIT.

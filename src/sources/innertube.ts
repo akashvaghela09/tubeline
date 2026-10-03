@@ -19,6 +19,7 @@ import {
 import { channelUrl, type Ref, refKindLabel, videoUrl } from "../core/resolve.ts";
 import type { Channel } from "../models/channel.ts";
 import type { Image } from "../models/common.ts";
+import type { SearchResult } from "../models/search.ts";
 import type { Video, VideoSummary } from "../models/video.ts";
 
 // The library logs parser drift loudly to the console; we surface problems ourselves.
@@ -75,6 +76,36 @@ export interface CaptionTrackRef {
   isAuto: boolean;
   isTranslatable: boolean;
   baseUrl: string;
+}
+
+export const SEARCH_TYPES = ["video", "shorts", "channel", "playlist", "all"] as const;
+export type SearchType = (typeof SEARCH_TYPES)[number];
+export const SEARCH_SORTS = ["relevance", "popularity"] as const;
+export const SEARCH_DURATIONS = {
+  short: "under_three_mins",
+  medium: "three_to_twenty_mins",
+  long: "over_twenty_mins",
+} as const;
+export const SEARCH_UPLOADED = ["today", "week", "month", "year"] as const;
+export const SEARCH_FEATURES = [
+  "hd",
+  "4k",
+  "subtitles",
+  "creative_commons",
+  "live",
+  "hdr",
+  "360",
+  "vr180",
+  "3d",
+  "location",
+] as const;
+
+export interface SearchOptions {
+  type: SearchType;
+  sort?: (typeof SEARCH_SORTS)[number];
+  duration?: keyof typeof SEARCH_DURATIONS;
+  uploaded?: (typeof SEARCH_UPLOADED)[number];
+  features?: (typeof SEARCH_FEATURES)[number][];
 }
 
 export const LIST_TYPES = ["videos", "shorts", "streams", "all"] as const;
@@ -193,6 +224,41 @@ export class InnertubeSource {
       throw mapLibraryError(err, `Video ${id} not found`);
     }
     return captionTracksFrom(id, android);
+  }
+
+  /** Stream search results across continuation pages until exhausted or the caller stops. */
+  async *search(query: string, opts: SearchOptions): AsyncGenerator<SearchResult> {
+    let page: Loose;
+    try {
+      page = await this.yt.search(query, {
+        type: opts.type,
+        prioritize: opts.sort,
+        duration: opts.duration ? SEARCH_DURATIONS[opts.duration] : undefined,
+        upload_date: opts.uploaded,
+        features: opts.features,
+      });
+    } catch (err) {
+      throw mapLibraryError(err);
+    }
+    const seen = new Set<string>();
+    for (;;) {
+      for (const raw of flattenShelves(page.results ?? [])) {
+        const item = mapSearchItem(raw);
+        if (!item || seen.has(`${item.type}:${item.id}`)) continue;
+        // Keep only what was asked for; "all" mixes in shelves of other kinds.
+        if (opts.type === "channel" && item.type !== "channel") continue;
+        if (opts.type === "playlist" && item.type !== "playlist") continue;
+        if ((opts.type === "video" || opts.type === "shorts") && item.type !== "video") continue;
+        seen.add(`${item.type}:${item.id}`);
+        yield item;
+      }
+      if (!page.has_continuation) return;
+      try {
+        page = await page.getContinuation();
+      } catch (err) {
+        throw mapLibraryError(err);
+      }
+    }
   }
 
   /**
@@ -327,6 +393,130 @@ export function captionTracksFrom(id: string, player: Loose): CaptionTrackRef[] 
     `Video ${id} captions unavailable: ${reason}`,
     "Pass --cookies from a logged-in session",
   );
+}
+
+/** Search pages nest some results in shelves (e.g. "People also watched"); flatten them. */
+function flattenShelves(items: Loose[]): Loose[] {
+  return items.flatMap((i: Loose) => {
+    const inner = i?.contents ?? i?.items ?? i?.content?.items;
+    return Array.isArray(inner) && !i?.video_id && !i?.content_id ? flattenShelves(inner) : [i];
+  });
+}
+
+export function mapSearchItem(raw: Loose): SearchResult | null {
+  switch (raw?.type) {
+    case "Video":
+      return mapSearchVideo(raw);
+    case "Channel":
+      return mapSearchChannel(raw);
+    case "LockupView":
+      if (raw.content_type === "PLAYLIST") return mapSearchPlaylist(raw);
+      if (raw.content_type === "VIDEO") {
+        const v = mapLockup(raw, null);
+        return v ? lockupToSearchVideo(v) : null;
+      }
+      return null;
+    case "ShortsLockupView": {
+      const v = mapShortsLockup(raw);
+      return v ? { ...lockupToSearchVideo(v), isShort: true } : null;
+    }
+    default:
+      return null;
+  }
+}
+
+function mapSearchVideo(raw: Loose): SearchResult | null {
+  const id: string | undefined = raw.video_id;
+  if (!id) return null;
+  const viewCountText: string | null = raw.view_count?.text ?? null;
+  const publishedText: string | null = raw.published?.text ?? null;
+  const badges = JSON.stringify(raw.badges ?? []) + JSON.stringify(raw.thumbnail_overlays ?? []);
+  return {
+    type: "video",
+    id,
+    url: videoUrl(id),
+    title: raw.title?.text ?? "",
+    channel: {
+      id: raw.author?.id ?? null,
+      name: raw.author?.name ?? "",
+      handle: handleFromUrl(raw.author?.url),
+      isVerified: (raw.author?.badges ?? []).some((b: Loose) => /VERIFIED/.test(b.style ?? "")),
+    },
+    durationSeconds: numberOrNull(raw.duration?.seconds) ?? parseClock(raw.length_text?.text),
+    viewCount: viewCountText && !/watching/i.test(viewCountText) ? parseCount(viewCountText) : null,
+    viewCountText,
+    publishedText,
+    publishedAtApprox: parseRelativeAge(publishedText),
+    isLive:
+      /BADGE_STYLE_TYPE_LIVE_NOW|"LIVE"/.test(badges) || /watching/i.test(viewCountText ?? ""),
+    isUpcoming: !!raw.upcoming,
+    isShort: /"SHORTS"|\/shorts\//.test(badges + JSON.stringify(raw.endpoint ?? {})),
+    description: (raw.description_snippet?.text ?? raw.snippets?.[0]?.text?.text ?? "").trim(),
+    thumbnail: firstImage(raw.thumbnails),
+  };
+}
+
+function lockupToSearchVideo(v: VideoSummary): Extract<SearchResult, { type: "video" }> {
+  return {
+    type: "video",
+    id: v.id,
+    url: v.url,
+    title: v.title,
+    channel: { id: null, name: v.channelName ?? "", handle: null, isVerified: false },
+    durationSeconds: v.durationSeconds,
+    viewCount: v.viewCount,
+    viewCountText: v.viewCountText,
+    publishedText: v.publishedText,
+    publishedAtApprox: v.publishedAtApprox,
+    isLive: v.isLive,
+    isUpcoming: v.isUpcoming,
+    isShort: v.type === "short",
+    description: "",
+    thumbnail: v.thumbnail,
+  };
+}
+
+function mapSearchChannel(raw: Loose): SearchResult | null {
+  const id: string | undefined = raw.author?.id ?? raw.id;
+  if (!id) return null;
+  // YouTube shuffles these between fields (the handle sometimes sits in subscriber_count).
+  const texts: string[] = [raw.subscriber_count?.text, raw.video_count?.text].filter(Boolean);
+  const subscriberCountText = texts.find((t) => /subscriber/i.test(t)) ?? null;
+  const videoCountText = texts.find((t) => /video/i.test(t)) ?? null;
+  return {
+    type: "channel",
+    id,
+    url: channelUrl(id),
+    name: raw.author?.name ?? "",
+    handle: handleFromUrl(raw.author?.url) ?? texts.find((t) => t.startsWith("@")) ?? null,
+    subscriberCount: parseCount(subscriberCountText),
+    subscriberCountText,
+    videoCount: parseCount(videoCountText),
+    isVerified: (raw.author?.badges ?? []).some((b: Loose) => /VERIFIED/.test(b.style ?? "")),
+    description: (raw.description_snippet?.text ?? "").trim(),
+    avatar: firstImage(raw.author?.thumbnails),
+  };
+}
+
+function mapSearchPlaylist(raw: Loose): SearchResult | null {
+  const id: string | undefined = raw.content_id;
+  if (!id) return null;
+  const parts: string[] = (raw.metadata?.metadata?.metadata_rows ?? []).flatMap((r: Loose) =>
+    (r?.metadata_parts ?? []).map((p: Loose) => p.text?.text).filter(Boolean),
+  );
+  const imageJson = JSON.stringify(raw.content_image ?? {});
+  const countText = imageJson.match(/"text":"([^"]*\bvideos?\b[^"]*)"/)?.[1] ?? null;
+  const author = parts[0] && !/^(playlist|updated|view full)/i.test(parts[0]) ? parts[0] : null;
+  return {
+    type: "playlist",
+    id,
+    url: `https://www.youtube.com/playlist?list=${id}`,
+    title: raw.metadata?.title?.text ?? "",
+    channelName: author,
+    videoCount: parseCount(countText),
+    updatedText: parts.find((p) => /^updated|^last updated/i.test(p)) ?? null,
+    thumbnail: firstImage(raw.content_image?.primary_thumbnail?.image ?? raw.content_image?.image),
+  };
 }
 
 const VIEWS = /^(?:no|\d[\d,.]*\s*[KMB]?)(?:\s+views?)?$/i;

@@ -1,6 +1,7 @@
 import { type Command, Option } from "commander";
 import type { AppContext } from "../core/context.ts";
 import { type CliError, toCliError } from "../core/errors.ts";
+import { updateHuman } from "../core/human.ts";
 import { log } from "../core/log.ts";
 import { parseFields, render } from "../core/output.ts";
 import { selfStatus, updateSelf } from "../update/self.ts";
@@ -105,6 +106,7 @@ Once installed, the managed yt-dlp is used in preference to one on PATH.`,
           fields: parseFields(opts.fields),
           single: true,
           pretty: process.stdout.isTTY,
+          human: updateHuman,
         }),
       );
       if (firstError) process.exitCode = firstError.exitCode;

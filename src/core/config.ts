@@ -7,7 +7,7 @@ import { CliError } from "./errors.ts";
 import type { LogLevel } from "./log.ts";
 import { appPaths } from "./paths.ts";
 
-export const FORMATS = ["json", "ndjson", "table", "csv"] as const;
+export const FORMATS = ["human", "json", "ndjson", "table", "csv"] as const;
 export type Format = (typeof FORMATS)[number];
 
 const LOG_LEVELS = ["silent", "error", "warn", "info", "debug"] as const;
@@ -44,6 +44,7 @@ export interface Config {
 /** Global CLI flags, as parsed by commander. */
 export interface GlobalFlags {
   format?: string;
+  json?: boolean;
   region?: string;
   cookies?: string;
   cookiesFromBrowser?: string;
@@ -78,11 +79,20 @@ function pick<T>(...values: (T | undefined)[]): T | undefined {
   return values.find((v) => v !== undefined);
 }
 
-export function loadConfig(flags: GlobalFlags = {}, env: NodeJS.ProcessEnv = process.env): Config {
+export function loadConfig(
+  flags: GlobalFlags = {},
+  env: NodeJS.ProcessEnv = process.env,
+  isTTY = !!process.stdout.isTTY,
+): Config {
   const paths = appPaths(env);
   const file = readConfigFile(env.YT_DATA_CONFIG || join(paths.config, "config.json"));
 
-  const format = pick(flags.format, file.format) ?? "json";
+  if (flags.json && flags.format && flags.format !== "json") {
+    throw new CliError("USAGE", `--json conflicts with --format ${flags.format}`);
+  }
+  // Humans at a terminal get readable output; pipes, agents and --json get JSON.
+  const format =
+    pick(flags.format, flags.json ? "json" : undefined, file.format) ?? (isTTY ? "human" : "json");
   if (!(FORMATS as readonly string[]).includes(format)) {
     throw new CliError("USAGE", `Unknown format "${format}"`, `Use one of: ${FORMATS.join(", ")}`);
   }

@@ -6,14 +6,16 @@ import { registerDocs } from "./commands/docs.ts";
 import { registerDoctor } from "./commands/doctor.ts";
 import { registerDownload } from "./commands/download.ts";
 import { registerSchema } from "./commands/schema.ts";
+import { registerSearch } from "./commands/search.ts";
 import { registerThumbnail } from "./commands/thumbnail.ts";
 import { registerTranscript } from "./commands/transcript.ts";
+import { registerUi } from "./commands/ui.ts";
 import { registerUpdate } from "./commands/update.ts";
 import { registerVideo } from "./commands/video.ts";
 import { registerVideos } from "./commands/videos.ts";
 import { FORMATS, type GlobalFlags } from "./core/config.ts";
 import { AppContext } from "./core/context.ts";
-import { CliError, toCliError } from "./core/errors.ts";
+import { CliError, formatError, setHumanErrors, toCliError } from "./core/errors.ts";
 import { shouldCheck, updateNotice } from "./update/check.ts";
 import { cleanupOld } from "./update/install.ts";
 
@@ -22,7 +24,13 @@ const program = new Command("yt-data")
     "Fetch YouTube channel and video data as JSON. Data goes to stdout, logs and errors to stderr; never prompts.",
   )
   .version(pkg.version, "-V, --version")
-  .addOption(new Option("-f, --format <fmt>", "output format (default: json)").choices(FORMATS))
+  .option("--json", "JSON output (the default when stdout isn't a terminal)")
+  .addOption(
+    new Option(
+      "-f, --format <fmt>",
+      "output format (default: human at a terminal, json otherwise)",
+    ).choices(FORMATS),
+  )
   .option("--region <code>", "content region, 2-letter country code (default: US)")
   .option("--cookies <file>", "Netscape cookies.txt for age-restricted / members-only content")
   .option(
@@ -55,12 +63,14 @@ const getCtx = () => {
 registerChannel(program, getCtx);
 registerVideo(program, getCtx);
 registerVideos(program, getCtx);
+registerSearch(program, getCtx);
 registerTranscript(program, getCtx);
 registerThumbnail(program, getCtx);
 registerDownload(program, getCtx);
 registerDoctor(program, getCtx);
 registerUpdate(program, getCtx);
 registerSchema(program);
+registerUi(program, getCtx);
 registerDocs(program);
 
 // `yt-data videos … | head` closes stdout early; that's a normal way to stop, not an error.
@@ -70,9 +80,19 @@ process.stdout.on("error", (err: NodeJS.ErrnoException) => {
 });
 
 cleanupOld(process.execPath);
+// Until the config is loaded (e.g. argument errors), guess from the terminal and flags.
+setHumanErrors(
+  !!process.stdout.isTTY &&
+    !!process.stderr.isTTY &&
+    !process.argv.some((a) => a === "--json" || a.startsWith("--format") || a === "-f"),
+);
+
+// Plain `yt-data` at a terminal opens the menus; anywhere else it prints help as before.
+const bare = process.argv.length <= 2;
+const interactive = !!process.stdin.isTTY && !!process.stdout.isTTY;
 
 try {
-  await program.parseAsync();
+  await program.parseAsync(bare && interactive ? [...process.argv, "ui"] : process.argv);
   await maybeNotifyUpdate();
 } catch (err) {
   if (err instanceof CommanderError) {
@@ -97,6 +117,6 @@ async function maybeNotifyUpdate() {
 }
 
 function fail(error: CliError): never {
-  process.stderr.write(`${JSON.stringify(error.toJSON())}\n`);
+  process.stderr.write(formatError(error));
   process.exit(error.exitCode);
 }

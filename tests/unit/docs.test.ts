@@ -24,7 +24,10 @@ describe("schemas", () => {
     const entry = SCHEMAS.find((s) => s.name === name);
     const schema = jsonSchema(entry as (typeof SCHEMAS)[number]);
     expect(schema.title).toBe(name);
-    expect(schema.type).toBe("object");
+    // Object schemas, or a oneOf/anyOf of objects for tagged unions (search).
+    expect(
+      schema.type === "object" || Array.isArray(schema.oneOf) || Array.isArray(schema.anyOf),
+    ).toBe(true);
     expect(JSON.stringify(schema)).not.toContain("9007199254740991");
   });
 
@@ -44,8 +47,10 @@ describe("docs", () => {
     for (const cmd of [
       "channel",
       "videos",
+      "search",
       "video",
       "transcript",
+      "ui",
       "thumbnail",
       "download",
       "update",

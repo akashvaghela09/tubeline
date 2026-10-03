@@ -55,6 +55,8 @@ export interface RenderOptions {
   fields?: string[];
   /** Pretty-print JSON (default: when stdout is a terminal). */
   pretty?: boolean;
+  /** Readable rendering for --format human; without it (or with --fields) a table is used. */
+  human?: (items: Json[]) => string;
 }
 
 /**
@@ -74,6 +76,8 @@ export function render(items: Json[], opts: RenderOptions & { single: boolean })
       return toCsv(rows);
     case "table":
       return toTable(rows);
+    case "human":
+      return opts.human && !opts.fields ? opts.human(items) : toTable(rows);
   }
 }
 

@@ -10,6 +10,7 @@ import {
   TranscriptFile,
   UpdateReport,
 } from "./results.ts";
+import { SearchResult } from "./search.ts";
 import { Transcript, Video, VideoSummary } from "./video.ts";
 
 export interface SchemaEntry {
@@ -23,6 +24,7 @@ export const SCHEMAS: SchemaEntry[] = [
   { name: "channel", summary: "`channel` — one per ref", schema: Channel },
   { name: "video", summary: "`video` and `videos --full` — one per video", schema: Video },
   { name: "videos", summary: "`videos` — one per listed video", schema: VideoSummary },
+  { name: "search", summary: "`search` — one per result (tagged by `type`)", schema: SearchResult },
   { name: "transcript", summary: "`transcript --as json`", schema: Transcript },
   { name: "transcript-list", summary: "`transcript --list`", schema: CaptionTrackList },
   { name: "transcript-file", summary: "`transcript -o …`", schema: TranscriptFile },

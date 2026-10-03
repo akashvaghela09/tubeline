@@ -4,6 +4,7 @@ import { z } from "zod";
 import { CliError, type ErrorCode } from "../../src/core/errors.ts";
 import { createFetch } from "../../src/core/http.ts";
 import { Channel } from "../../src/models/channel.ts";
+import { SearchResult } from "../../src/models/search.ts";
 import { Transcript, Video, VideoSummary } from "../../src/models/video.ts";
 import { createInnertube, InnertubeSource } from "../../src/sources/innertube.ts";
 import { SCENARIOS } from "../helpers/scenarios.ts";
@@ -26,6 +27,10 @@ const EXPECT: Record<string, { schema?: z.ZodType; error?: ErrorCode }> = {
   "list-popular": { schema: List },
   "list-all": { schema: List },
   "list-playlist": { schema: List },
+  "search-videos": { schema: z.array(SearchResult).min(1) },
+  "search-channels": { schema: z.array(SearchResult).min(1) },
+  "search-playlists": { schema: z.array(SearchResult).min(1) },
+  "search-shorts": { schema: z.array(SearchResult).min(1) },
   "transcript-manual": { schema: Transcript.strict() },
   "transcript-auto": { schema: Transcript.strict() },
   "transcript-other-lang": { schema: Transcript.strict() },

@@ -1,13 +1,15 @@
 # yt-data
 
-A fast, agent-friendly CLI for fetching YouTube data: channel details, video lists,
+A fast YouTube CLI for people **and** AI agents: channel details, video lists, search,
 video metadata, transcripts, thumbnails and video/audio downloads.
 
 - **No browser.** Metadata comes from YouTube's InnerTube JSON API over plain HTTP.
 - **Downloads via [yt-dlp](https://github.com/yt-dlp/yt-dlp)**, auto-managed if you
   don't have it installed.
-- **Built for scripts and AI agents:** JSON on stdout, logs on stderr, stable exit codes,
-  `--fields` projection, NDJSON streaming, JSON Schemas for every output, man page.
+- **Interactive menus for people:** run `yt-data`, paste a link or search, pick what to do.
+  Readable output by default at a terminal.
+- **Built for scripts and AI agents:** `--json` (the default when piped), logs on stderr,
+  stable exit codes, `--fields` projection, NDJSON streaming, JSON Schemas, man page.
 - **Single binary**, no runtime needed. Self-updating.
 
 > **Status:** pre-1.0. All commands below work; see [`docs/plan.md`](docs/plan.md) for the roadmap.
@@ -35,9 +37,22 @@ Keep everything current with `yt-data update`.
 
 ## Usage
 
+### Interactive
+
+```sh
+yt-data          # menus: open a link or search → download / transcript / thumbnail / browse
+```
+
+Downloads go to your Downloads folder by default; your last choices are remembered.
+Esc or Ctrl+C goes back a level.
+
+### Commands
+
 ```sh
 yt-data channel @mkbhd
 yt-data videos @mkbhd --limit 20 --fields id,title,viewCount,publishedText
+yt-data search mkbhd iphone review
+yt-data search mkbhd --type channel
 yt-data video dQw4w9WgXcQ
 yt-data transcript dQw4w9WgXcQ --as txt
 yt-data thumbnail dQw4w9WgXcQ -o ./thumbs
@@ -63,8 +78,9 @@ Full reference: [`docs/cli.md`](docs/cli.md).
 - `yt-data docs` prints the complete reference (markdown); `yt-data <command> --help` and
   `man yt-data` cover the same options.
 - `yt-data schema <name>` prints the JSON Schema of an output (`schema` alone lists them).
-- Output is JSON on stdout (compact when piped); `--fields a,b.c` keeps responses small;
-  `--format ndjson` streams lists.
+- Pass `--json` (JSON is also the default whenever stdout isn't a terminal); `--fields a,b.c`
+  keeps responses small; `--format ndjson` streams lists. Don't use `yt-data ui` — it's
+  for people.
 - The CLI never prompts. Failures exit non-zero with one JSON line on stderr:
   `{"error":{"code","message","hint"}}` — see the
   [exit codes](docs/cli.md#output-and-errors).

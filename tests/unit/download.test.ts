@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { formatArgs, splitArgs } from "../../src/commands/download.ts";
 import { CliError } from "../../src/core/errors.ts";
+import { formatArgs, parsePercent, splitArgs } from "../../src/services/download.ts";
 
 test("formatArgs with ffmpeg", () => {
   expect(formatArgs("best", "m4a", true).args).toEqual([
@@ -41,4 +41,10 @@ test("splitArgs honours quotes", () => {
     "-o",
     "x y",
   ]);
+});
+
+test("parsePercent", () => {
+  expect(parsePercent("[download]  42.0% of  218.53KiB at  2.75MiB/s ETA 00:00")).toBe(42);
+  expect(parsePercent("[download] 100% of  218.53KiB in 00:00:00")).toBe(100);
+  expect(parsePercent("[Merger] Merging formats")).toBeNull();
 });

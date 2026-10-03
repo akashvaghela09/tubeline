@@ -4,6 +4,7 @@ import type { Command } from "commander";
 import pkg from "../../package.json";
 import type { AppContext } from "../core/context.ts";
 import { CliError, type ErrorCode, toCliError } from "../core/errors.ts";
+import { doctorHuman } from "../core/human.ts";
 import { parseFields, render } from "../core/output.ts";
 import { appPaths } from "../core/paths.ts";
 import { videoUrl } from "../core/resolve.ts";
@@ -67,6 +68,7 @@ Exit 0 when every required check passes; otherwise the code of the first failed 
           fields,
           single: !tabular,
           pretty: process.stdout.isTTY,
+          human: doctorHuman,
         }),
       );
       if (failed)
@@ -74,7 +76,7 @@ Exit 0 when every required check passes; otherwise the code of the first failed 
     });
 }
 
-async function runChecks(ctx: AppContext, online: boolean): Promise<Check[]> {
+export async function runChecks(ctx: AppContext, online: boolean): Promise<Check[]> {
   const checks: Check[] = [];
   const add = (c: Check) => checks.push(c);
 

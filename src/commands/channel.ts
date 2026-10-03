@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import type { AppContext } from "../core/context.ts";
+import { channelHuman } from "../core/human.ts";
 import { parseRef } from "../core/resolve.ts";
 import { runForRefs } from "../core/run.ts";
 
@@ -24,7 +25,7 @@ Output schema: yt-data schema channel`,
     )
     .action(async (refs: string[], opts: { fields?: string }) => {
       const ctx = getCtx();
-      await runForRefs(ctx, refs, opts, async (ref) => {
+      await runForRefs(ctx, refs, { ...opts, human: channelHuman }, async (ref) => {
         const parsed = parseRef(ref);
         return (await ctx.innertube()).getChannel(parsed);
       });

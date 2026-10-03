@@ -6,6 +6,26 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-03
+
+### Added
+- Interactive menus: `yt-data ui`, or plain `yt-data` at a terminal. Open a link or search,
+  then download video/audio with a progress bar, view or save transcripts, download
+  thumbnails, browse channels and playlists (type to filter, load more), bulk actions on
+  several videos, update and doctor. Remembers download folder, quality and formats;
+  downloads default to the Downloads folder.
+- `yt-data search <query>`: videos, shorts, channels or playlists with sort, duration,
+  upload-date and feature filters, following result pages.
+- `--json` global flag.
+- Readable `human` output format with colors (respects `NO_COLOR`).
+
+### Changed
+- **Breaking:** at a terminal, commands now print readable output by default and errors
+  as `✗ message` / `→ hint`. JSON is unchanged and remains the default whenever stdout is
+  not a terminal; use `--json` (or `--format json`) to force it.
+- At a terminal without `-o`, `transcript` shows a readable transcript instead of JSON.
+- Download logic moved into a shared service used by both `download` and the menus.
+
 ## [0.1.1] - 2026-10-03
 
 ### Fixed
@@ -49,6 +69,7 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 - Project scaffold: README, plan, CLI spec, release guide, MIT license.
 - Tooling: Bun, TypeScript, Biome; CI, nightly live-test and release workflows; `install.sh`.
 
-[Unreleased]: https://github.com/akashvaghela09/yt-data/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/akashvaghela09/yt-data/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/akashvaghela09/yt-data/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/akashvaghela09/yt-data/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/akashvaghela09/yt-data/releases/tag/v0.1.0

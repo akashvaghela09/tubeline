@@ -1,11 +1,13 @@
 // Runs a command over one or more refs and writes results/errors per the output contract.
 import type { AppContext } from "./context.ts";
-import { type CliError, toCliError } from "./errors.ts";
+import { type CliError, formatError, toCliError } from "./errors.ts";
 import { parseFields, render } from "./output.ts";
 
 export interface RunOptions {
   fields?: string;
   concurrency?: number;
+  /** Readable rendering for --format human. */
+  human?: (items: unknown[]) => string;
 }
 
 /** Expand "-" into refs read from stdin (one per line, blank lines and # comments skipped). */
@@ -40,9 +42,7 @@ export async function runForRefs<T>(
   for (const r of results) {
     if (r.ok) continue;
     firstError ??= r.error;
-    process.stderr.write(
-      `${JSON.stringify(r.error.toJSON(refs.length > 1 ? r.ref : undefined))}\n`,
-    );
+    process.stderr.write(formatError(r.error, refs.length > 1 ? r.ref : undefined));
   }
 
   if (values.length || !firstError) {
@@ -52,6 +52,7 @@ export async function runForRefs<T>(
         fields,
         single: rawRefs.length === 1 && rawRefs[0] !== "-",
         pretty: process.stdout.isTTY,
+        human: opts.human,
       }),
     );
   }

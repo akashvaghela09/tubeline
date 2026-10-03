@@ -7,8 +7,10 @@ import type { YtDlpOptions } from "../sources/ytdlp.ts";
 import { ResponseCache } from "./cache.ts";
 import { type Config, type GlobalFlags, loadConfig } from "./config.ts";
 import { loadCookieHeader } from "./cookies.ts";
+import { setHumanErrors } from "./errors.ts";
 import { createFetch, type FetchFn } from "./http.ts";
 import { setLogLevel } from "./log.ts";
+import { setColor } from "./style.ts";
 
 export class AppContext {
   readonly config: Config;
@@ -19,6 +21,9 @@ export class AppContext {
   constructor(flags: GlobalFlags, env: NodeJS.ProcessEnv = process.env) {
     this.config = loadConfig(flags, env);
     setLogLevel(this.config.logLevel);
+    const human = this.config.format === "human";
+    setColor(human && !!process.stdout.isTTY && !env.NO_COLOR);
+    setHumanErrors(human && !!process.stderr.isTTY);
     this.fetch = createFetch({ proxy: this.config.proxy });
     this.cache = new ResponseCache(
       join(this.config.cacheDir, "responses"),

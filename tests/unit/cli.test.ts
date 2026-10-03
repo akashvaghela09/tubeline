@@ -53,6 +53,10 @@ describe("cli", () => {
     [["transcript", "dQw4w9WgXcQ", "--as", "pdf"], "pdf"],
     [["thumbnail", "@mkbhd", "--url-only"], "not a video"],
     [["thumbnail", "dQw4w9WgXcQ", "--quality", "huge"], "huge"],
+    [["--json", "--format", "csv", "channel", "@x"], "conflicts"],
+    [["ui"], "interactive terminal"],
+    [["search", "x", "--features", "nope"], "Unknown --features"],
+    [["search", "x", "--type", "people"], "people"],
   ])("usage error %p → exit 2 + JSON on stderr", async (args, fragment) => {
     const r = await run(...args);
     expect(r.code).toBe(2);

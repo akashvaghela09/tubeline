@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import type { AppContext } from "../core/context.ts";
 import { CliError } from "../core/errors.ts";
+import { videoHuman } from "../core/human.ts";
 import { parseRef, refKindLabel } from "../core/resolve.ts";
 import { runForRefs } from "../core/run.ts";
 
@@ -28,7 +29,7 @@ Output schema: yt-data schema video`,
     )
     .action(async (refs: string[], opts: { fields?: string }) => {
       const ctx = getCtx();
-      await runForRefs(ctx, refs, opts, async (ref) => {
+      await runForRefs(ctx, refs, { ...opts, human: videoHuman }, async (ref) => {
         const parsed = parseRef(ref);
         if (parsed.kind !== "video") {
           throw new CliError(
