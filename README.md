@@ -40,11 +40,15 @@ Keep everything current with `yt-data update`.
 ### Interactive
 
 ```sh
-yt-data          # menus: open a link or search → download / transcript / thumbnail / browse
+yt-data          # full-screen app: paste a link or search, then download, transcribe, browse
 ```
 
-Downloads go to your Downloads folder by default; your last choices are remembered.
-Esc or Ctrl+C goes back a level.
+Paste a link, `@handle` or id — or type to search — then use single keys: `d` download
+video, `a` audio, `t` transcript, `i` thumbnail, `c` channel. Browse channels and playlists
+in columns, filter with `/`, select several with `space` and download them in one go.
+Downloads run in the background with a live progress panel (size, speed, ETA). Folders,
+quality and formats are remembered; downloads default to your Downloads folder.
+`Esc` goes back, `Ctrl+C` quits.
 
 ### Commands
 

@@ -6,6 +6,31 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-03
+
+### Changed
+- **New interactive app** (`yt-data` / `yt-data ui`), rebuilt as a full-screen UI on
+  OpenTUI, following a UX review of 0.2.0:
+  - Home is one input for links, @handles, ids and searches, with recent items.
+  - Video screen shows captions, best quality with estimated size and whether it's already
+    downloaded; single-key actions with remembered defaults (`d`, `a`, `t`, `i`, `c`).
+  - Channel/playlist/search lists show length, views and age in columns, with `/` filter,
+    `space` multi-select, bulk actions, tabs, automatic paging, and kept position on return.
+  - Downloads run in a background queue with a live panel: one monotonic bar across video,
+    audio and merge/convert, with size, speed, ETA and stage; cancel removes partial files.
+  - Readable transcript view with save and language switch; settings screen; downloads list
+    with cancel/retry; setup check and update from anywhere; session summary on exit.
+  - Folder prompts accept new folders (created on confirm); outdated yt-dlp is detected on
+    download failure with an update offer.
+- `download` shows one progress line (size, speed, ETA, stage) on stderr at a terminal.
+- `doctor` reports whether the interactive UI's native renderer loads.
+
+### Added
+- `video` output: `qualities[]` — available qualities with estimated download size.
+
+### Removed
+- The 0.2.0 prompt-based menus (@clack/prompts).
+
 ## [0.2.0] - 2026-10-03
 
 ### Added
@@ -69,7 +94,8 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 - Project scaffold: README, plan, CLI spec, release guide, MIT license.
 - Tooling: Bun, TypeScript, Biome; CI, nightly live-test and release workflows; `install.sh`.
 
-[Unreleased]: https://github.com/akashvaghela09/yt-data/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/akashvaghela09/yt-data/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/akashvaghela09/yt-data/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/akashvaghela09/yt-data/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/akashvaghela09/yt-data/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/akashvaghela09/yt-data/releases/tag/v0.1.0

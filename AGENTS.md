@@ -14,6 +14,10 @@ via `youtubei.js`; downloads via a `yt-dlp` subprocess. Plan and roadmap:
 - `bun run dev -- <args>`: run from source
 - `bun test`: unit + contract tests, offline (`YT_DATA_LIVE=1` adds live YouTube tests)
 - `bun run scripts/record-fixtures.ts [scenario]`: re-record InnerTube fixtures
+- UI tests (`tests/ui/`) drive the OpenTUI app in an in-memory renderer with fake
+  services; `YT_DATA_UI_KEYLOG=/tmp/keys.log yt-data` logs real key events when debugging.
+- Cross-compiling needs every platform's OpenTUI package:
+  `bun install --frozen-lockfile --os='*' --cpu='*'` before `bun run build:all`.
 - `bun run typecheck` / `bun run lint`
 - `bun run build`: compile `dist/yt-data`
 
@@ -23,6 +27,10 @@ via `youtubei.js`; downloads via a `yt-dlp` subprocess. Plan and roadmap:
   human`, the default at a terminal) and `src/ui/` are for people and may change freely, but
   must never appear when stdout isn't a terminal or with `--json`. Commands never prompt;
   only `yt-data ui` (or bare `yt-data` at a terminal) is interactive.
+- `src/ui/` (OpenTUI + React) talks to the rest only through `UiServices`
+  (`src/ui/services.ts`); keep it that way so the UI stays testable. Screen state that must
+  survive navigation lives in the screen's stack entry (`model`), not in component state.
+  Screens ignore Ctrl/Alt keys; those belong to the app shell.
 - Branches: develop on `dev`; `main` is what's released; `version-1` holds the v0.1.x line. stdout carries data only;
   logs go to stderr; never prompt; map failures to the typed error codes/exit codes.
 - zod schemas in `src/models/` are the single source of truth for output types and the

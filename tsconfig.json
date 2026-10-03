@@ -12,6 +12,8 @@
     "resolveJsonModule": true,
     "verbatimModuleSyntax": true,
     "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@opentui/react",
     "noEmit": true
   },
   "include": ["src", "tests", "scripts"]

@@ -1,5 +1,5 @@
 // Downloading through yt-dlp, shared by `yt-data download` and the interactive UI.
-import { mkdirSync, statSync } from "node:fs";
+import { mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { CliError } from "../core/errors.ts";
 import { videoUrl } from "../core/resolve.ts";
@@ -95,22 +95,143 @@ export interface DownloadResult {
   formatId: string;
   resolution: string;
   sizeBytes: number | null;
+  /** The file was already in the output folder; yt-dlp skipped the download. */
+  alreadyDownloaded?: boolean;
 }
 
+export type Stage = "preparing" | "downloading" | "merging" | "converting" | "done";
+
 export interface Progress {
-  /** 0–100 when yt-dlp reports it. */
-  percent: number | null;
+  stage: Stage;
+  /** 1-based stream being downloaded, of `streams` (video + audio = 2). */
+  stream: number;
+  streams: number;
+  /** Overall 0–100 across streams and post-processing; never goes backwards. */
+  percent: number;
+  /** Current stream, 0–100. */
+  streamPercent: number | null;
+  totalBytes: number | null;
+  downloadedBytes: number | null;
+  /** Bytes per second. */
+  speed: number | null;
+  /** Seconds remaining for the current stream. */
+  eta: number | null;
   line: string;
+}
+
+/** Machine-readable lines we ask yt-dlp to print (it prints nothing else in quiet mode). */
+const FMT_TAG = "YTDATA_FMT ";
+const PROG_TAG = "YTDATA_PROG ";
+const POST_TAG = "YTDATA_POST ";
+
+export const PROGRESS_ARGS = [
+  "--print",
+  `before_dl:${FMT_TAG}%(format_id)s`,
+  "--progress",
+  "--newline",
+  "--progress-template",
+  `download:${PROG_TAG}%(info.format_id)s|%(progress.status)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s`,
+  "--progress-template",
+  `postprocess:${POST_TAG}%(progress.postprocessor)s|%(progress.status)s`,
+];
+
+const num = (v: string | undefined): number | null => {
+  const n = Number(v);
+  return v && v !== "NA" && Number.isFinite(n) ? n : null;
+};
+
+/**
+ * Turns yt-dlp's progress lines into one monotonic overall progress. Streams share the
+ * download phase by weight (video is much larger than audio); merging or audio conversion
+ * takes the last few percent.
+ */
+export class ProgressTracker {
+  private state: Progress = {
+    stage: "preparing",
+    stream: 0,
+    streams: 1,
+    percent: 0,
+    streamPercent: null,
+    totalBytes: null,
+    downloadedBytes: null,
+    speed: null,
+    eta: null,
+    line: "",
+  };
+  private formats: string[] = [];
+  private sawDownload = false;
+
+  constructor(private readonly postProcess: boolean) {}
+
+  /** No bytes were transferred: the file was already there. */
+  get alreadyDownloaded(): boolean {
+    return !this.sawDownload;
+  }
+
+  update(line: string): Progress {
+    const s = this.state;
+    s.line = line;
+    if (line.startsWith(FMT_TAG)) {
+      this.formats = line.slice(FMT_TAG.length).trim().split("+");
+      s.streams = Math.max(1, this.formats.length);
+    } else if (line.startsWith(PROG_TAG)) {
+      const [fmt, status, done, total, estimate, speed, eta] = line
+        .slice(PROG_TAG.length)
+        .split("|");
+      const index = this.formats.indexOf(fmt ?? "");
+      s.stream = index >= 0 ? index + 1 : Math.max(1, s.stream);
+      s.stage = "downloading";
+      if (status === "downloading") this.sawDownload = true;
+      s.totalBytes = num(total) ?? num(estimate);
+      s.downloadedBytes = num(done);
+      s.streamPercent =
+        status === "finished"
+          ? 100
+          : s.totalBytes && s.downloadedBytes !== null
+            ? (s.downloadedBytes / s.totalBytes) * 100
+            : null;
+      s.speed = num(speed);
+      s.eta = num(eta);
+    } else if (line.startsWith(POST_TAG)) {
+      const [pp, status] = line.slice(POST_TAG.length).split("|");
+      if (status === "started") {
+        if (pp === "Merger") s.stage = "merging";
+        else if (pp === "ExtractAudio" || pp === "VideoConvertor") s.stage = "converting";
+      }
+    }
+    s.percent = Math.max(s.percent, this.overall());
+    return { ...s };
+  }
+
+  finish(): Progress {
+    this.state.stage = "done";
+    this.state.percent = 100;
+    return { ...this.state };
+  }
+
+  private overall(): number {
+    const s = this.state;
+    if (s.stage === "done") return 100;
+    const share = this.postProcess || s.streams > 1 ? 95 : 100;
+    if (s.stage === "merging" || s.stage === "converting") return share;
+    if (s.stage === "preparing" || s.stream === 0) return 0;
+    const weights =
+      s.streams === 1 ? [1] : [0.85, ...Array(s.streams - 1).fill(0.15 / (s.streams - 1))];
+    const before = weights.slice(0, s.stream - 1).reduce((a, b) => a + b, 0);
+    const current = (weights[s.stream - 1] ?? 0) * ((s.streamPercent ?? 0) / 100);
+    return Math.min(share, (before + current) * share);
+  }
 }
 
 /** Plan a batch once (dependency checks, warnings) and get a function that downloads one id. */
 export function prepareDownload(req: DownloadRequest, ytdlpOpts: YtDlpOptions) {
   const ytdlp = requireYtDlp();
-  const plan = formatArgs(req.quality, req.audioFormat, findFfmpeg() !== null);
+  const hasFfmpeg = findFfmpeg() !== null;
+  const plan = formatArgs(req.quality, req.audioFormat, hasFfmpeg);
   mkdirSync(req.output, { recursive: true });
 
   const extra: string[] = [];
-  if (req.subs)
+  if (req.subs) {
     extra.push(
       "--write-subs",
       "--write-auto-subs",
@@ -119,13 +240,16 @@ export function prepareDownload(req: DownloadRequest, ytdlpOpts: YtDlpOptions) {
       "--convert-subs",
       "srt",
     );
+  }
   if (req.thumbnail) extra.push("--write-thumbnail", "--convert-thumbnails", "jpg");
   extra.push(...(req.extraArgs ?? []));
 
   const download = async (
     id: string,
     onProgress?: (p: Progress) => void,
+    signal?: AbortSignal,
   ): Promise<DownloadResult> => {
+    const tracker = new ProgressTracker(req.quality === "audio" && hasFfmpeg);
     const args = [
       ...commonArgs(ytdlpOpts),
       ...plan.args,
@@ -133,16 +257,24 @@ export function prepareDownload(req: DownloadRequest, ytdlpOpts: YtDlpOptions) {
       join(req.output, req.template ?? DEFAULT_TEMPLATE),
       "--print",
       `after_move:${RESULT_TAG}%(.{id,title,filepath,ext,format_id,resolution})j`,
-      "--progress",
-      "--newline",
+      ...PROGRESS_ARGS,
       ...extra,
       videoUrl(id),
     ];
     let result: Record<string, unknown> | undefined;
-    const res = await runYtDlpStreaming(ytdlp.path, args, (line) => {
-      if (line.startsWith(RESULT_TAG)) result = JSON.parse(line.slice(RESULT_TAG.length));
-      else onProgress?.({ percent: parsePercent(line), line });
-    });
+    const res = await runYtDlpStreaming(
+      ytdlp.path,
+      args,
+      (line) => {
+        if (line.startsWith(RESULT_TAG)) result = JSON.parse(line.slice(RESULT_TAG.length));
+        else onProgress?.(tracker.update(line));
+      },
+      signal,
+    );
+    if (signal?.aborted) {
+      removePartials(req.output, id);
+      throw new CliError("USAGE", "Download cancelled");
+    }
     if (res.code !== 0) throw ytDlpError(res.stderr);
     if (!result) {
       throw new CliError(
@@ -151,6 +283,7 @@ export function prepareDownload(req: DownloadRequest, ytdlpOpts: YtDlpOptions) {
         res.stderr.trim() || undefined,
       );
     }
+    onProgress?.(tracker.finish());
     const path = String(result.filepath);
     return {
       id: String(result.id),
@@ -160,15 +293,25 @@ export function prepareDownload(req: DownloadRequest, ytdlpOpts: YtDlpOptions) {
       formatId: String(result.format_id),
       resolution: String(result.resolution),
       sizeBytes: fileSize(path),
+      alreadyDownloaded: tracker.alreadyDownloaded,
     };
   };
   return { download, warning: plan.warning };
 }
 
-/** "[download]  42.0% of 10.00MiB at …" → 42. */
-export function parsePercent(line: string): number | null {
-  const m = line.match(/^\[download\]\s+(\d+(?:\.\d+)?)%/);
-  return m ? Number(m[1]) : null;
+/** Remove yt-dlp leftovers (.part, .ytdl, unmerged .fNNN.ext) belonging to `id`. */
+export function removePartials(dir: string, id: string): number {
+  let removed = 0;
+  try {
+    for (const name of readdirSync(dir)) {
+      if (!name.includes(id)) continue;
+      if (/\.(part|ytdl)$|\.part-Frag\d+$|\.f\d+\.\w+$/.test(name)) {
+        rmSync(join(dir, name), { force: true });
+        removed++;
+      }
+    }
+  } catch {}
+  return removed;
 }
 
 function fileSize(path: string): number | null {

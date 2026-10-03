@@ -7,7 +7,15 @@ import type { AudioFormat, Quality } from "../services/download.ts";
 
 export type TranscriptChoice = "txt" | "txt-timestamps" | "srt" | "vtt" | "json";
 
+export interface RecentItem {
+  /** What to open: a ref string (URL, @handle, id) or a search query. */
+  kind: "ref" | "search";
+  value: string;
+  label: string;
+}
+
 export interface Prefs {
+  recent: RecentItem[];
   downloadDir: string;
   videoQuality: Exclude<Quality, "audio">;
   audioFormat: AudioFormat;
@@ -33,6 +41,7 @@ export function downloadsDir(): string {
 export function loadPrefs(): Prefs {
   const dl = downloadsDir();
   const defaults: Prefs = {
+    recent: [],
     downloadDir: dl,
     videoQuality: "best",
     audioFormat: "mp3",
@@ -68,4 +77,11 @@ export function safeName(name: string): string {
       .trim()
       .slice(0, 150) || "untitled"
   );
+}
+
+export function addRecent(prefs: Prefs, item: RecentItem, max = 8) {
+  prefs.recent = [
+    item,
+    ...prefs.recent.filter((r) => !(r.kind === item.kind && r.value === item.value)),
+  ].slice(0, max);
 }

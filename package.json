@@ -1,6 +1,6 @@
 {
   "name": "yt-data",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Agent-friendly CLI to fetch YouTube channel/video metadata, transcripts, thumbnails and downloads",
   "private": true,
   "type": "module",
@@ -20,14 +20,17 @@
     "bun": ">=1.4"
   },
   "dependencies": {
-    "@clack/prompts": "^1.8.1",
+    "@opentui/core": "^0.5.14",
+    "@opentui/react": "^0.5.14",
     "commander": "^15.0.0",
+    "react": "^19.3.0",
     "youtubei.js": "^18.1.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",
     "@types/bun": "^1.4.2",
+    "@types/react": "^19.3.0",
     "typescript": "^7.0.2"
   }
 }

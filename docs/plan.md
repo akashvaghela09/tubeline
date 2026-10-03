@@ -1,6 +1,6 @@
 # yt-data — Project Plan
 
-Status: **v0.2.0 in progress on `dev`** — v0.1.x on `version-1` · Last updated: 2026-10-03
+Status: **v0.3.0 on `dev`** (OpenTUI app) — v0.2.0 merged to `main`, v0.1.x on `version-1` · Last updated: 2026-10-03
 
 ## 1. Goal
 
@@ -285,7 +285,8 @@ Precedence: flag > env > config file > default.
 | 5 | `update` (self + yt-dlp), update notices | ✅ |
 | 6 | Docs: man page, `docs`, `schema`, README polish | ✅ |
 | 7 | CI + release pipeline, `install.sh` | ✅ v0.1.0 (install.sh + self-update verified on Linux) |
-| 8 (v0.2) | Human output by default at a terminal, `--json`; `search`; interactive menus (`yt-data ui`) | ✅ on `dev` |
+| 8 (v0.2) | Human output by default at a terminal, `--json`; `search`; interactive menus (`yt-data ui`) | ✅ |
+| 9 (v0.3) | Full-screen app on OpenTUI after a UX review; download queue with real progress | ✅ on `dev` |
 | Later | comments, Data API v3 backend, Whisper, MCP server, Playwright fallback | — |
 
 ## 14. Risks
@@ -304,7 +305,11 @@ Precedence: flag > env > config file > default.
   `human` : `json`). Agents run without a TTY, so they keep getting JSON unchanged.
 - Human renderers live in `src/core/human.ts`; commands pass one to `runForRefs` /
   `createListWriter`. With `--fields`, human mode falls back to a table.
-- Menus (`src/ui/`, @clack/prompts) call the same services as the commands (`InnertubeSource`,
+- v0.3 replaced the clack menus with a full-screen OpenTUI (React) app; see
+  docs/cli.md `ui`. Download progress comes from yt-dlp's structured `--progress-template`
+  (`YTDATA_PROG fmt|status|done|total|estimate|speed|eta`), stream count from
+  `--print before_dl:%(format_id)s`, stages from postprocessor templates.
+- Menus (`src/ui/`) call the same services as the commands (`InnertubeSource`,
   `services/download.ts`, `services/transcript.ts`) — they never shell out to the CLI.
   They're loaded lazily so scripted runs don't pay for them.
 - Search uses InnerTube `/search` filters as exposed by youtubei.js v18: `prioritize`

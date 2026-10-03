@@ -735,11 +735,34 @@ export function mapVideo(info: Loose, android: Loose): Video {
     thumbnails: videoThumbnails(id, basic.thumbnail),
     captions,
     chapters: playerChapters(info) ?? parseDescriptionChapters(description),
+    qualities: qualitiesFrom(android ?? info),
     playability: {
       status: playability.status ?? "UNKNOWN",
       reason: playability.reason || null,
     },
   };
+}
+
+/** Distinct quality labels with an estimated size: smallest video stream at that label + best audio. */
+export function qualitiesFrom(player: Loose): Video["qualities"] {
+  const formats: Loose[] = player?.streaming_data?.adaptive_formats ?? [];
+  const audio = Math.max(
+    0,
+    ...formats.filter((f) => f.has_audio && !f.has_video).map((f) => Number(f.content_length) || 0),
+  );
+  const byLabel = new Map<string, number | null>();
+  for (const f of formats) {
+    if (!f.has_video) continue;
+    const label = String(f.quality_label ?? "").match(/^\d+p/)?.[0];
+    if (!label) continue;
+    const size = Number(f.content_length) || null;
+    const prev = byLabel.get(label);
+    if (prev === undefined || (size !== null && (prev === null || size < prev)))
+      byLabel.set(label, size);
+  }
+  return [...byLabel.entries()]
+    .sort((a, b) => Number.parseInt(b[0], 10) - Number.parseInt(a[0], 10))
+    .map(([label, size]) => ({ label, bytes: size === null ? null : size + audio }));
 }
 
 function playerChapters(info: Loose): Video["chapters"] | null {

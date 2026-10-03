@@ -20,7 +20,7 @@ export function registerUi(program: Command, getCtx: () => AppContext) {
       // Some pseudo-terminals report 0 columns, which makes every prompt wrap per character.
       if (!process.stdout.columns) Object.defineProperty(process.stdout, "columns", { value: 80 });
       // Loaded on demand so scripted runs never pay for the UI code.
-      const { runUi } = await import("../ui/index.ts");
+      const { runUi } = await import("../ui/index.tsx");
       await runUi(getCtx());
     });
 }

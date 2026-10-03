@@ -145,6 +145,7 @@ export async function runChecks(ctx: AppContext, online: boolean): Promise<Check
     code: "MISSING_DEPENDENCY",
   });
 
+  add(await tuiCheck());
   add(writableDir("cache dir", ctx.config.cacheDir));
   add({ name: "config", ok: true, required: true, detail: configPath(), hint: null });
 
@@ -219,6 +220,30 @@ async function probe(
     const e = toCliError(err);
     add({ name, ok: false, required, detail: e.message, hint: e.hint ?? null, code: e.code });
     return undefined;
+  }
+}
+
+/** The interactive UI's native renderer (OpenTUI) must load on this platform. */
+async function tuiCheck(): Promise<Check> {
+  try {
+    const { resolveRenderLib } = await import("@opentui/core");
+    resolveRenderLib();
+    return {
+      name: "interactive ui",
+      ok: true,
+      required: false,
+      detail: "native renderer loads",
+      hint: null,
+    };
+  } catch (err) {
+    return {
+      name: "interactive ui",
+      ok: false,
+      required: false,
+      detail: `native renderer failed to load: ${(err as Error).message}`,
+      hint: "Commands still work; only `yt-data ui` is affected. Please report your platform.",
+      code: "INTERNAL",
+    };
   }
 }
 

@@ -1,6 +1,14 @@
 import { expect, test } from "bun:test";
+import { mkdtempSync, readdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { CliError } from "../../src/core/errors.ts";
-import { formatArgs, parsePercent, splitArgs } from "../../src/services/download.ts";
+import {
+  formatArgs,
+  ProgressTracker,
+  removePartials,
+  splitArgs,
+} from "../../src/services/download.ts";
 
 test("formatArgs with ffmpeg", () => {
   expect(formatArgs("best", "m4a", true).args).toEqual([
@@ -43,8 +51,69 @@ test("splitArgs honours quotes", () => {
   ]);
 });
 
-test("parsePercent", () => {
-  expect(parsePercent("[download]  42.0% of  218.53KiB at  2.75MiB/s ETA 00:00")).toBe(42);
-  expect(parsePercent("[download] 100% of  218.53KiB in 00:00:00")).toBe(100);
-  expect(parsePercent("[Merger] Merging formats")).toBeNull();
+test("ProgressTracker: one monotonic bar across video, audio and merge", () => {
+  const t = new ProgressTracker(false);
+  const seen: number[] = [];
+  const stages: string[] = [];
+  for (const line of [
+    "YTDATA_FMT 395+251",
+    "YTDATA_PROG 395|downloading|1024|200000|NA|NA|NA",
+    "YTDATA_PROG 395|downloading|100000|200000|NA|5000000|3",
+    "YTDATA_PROG 395|finished|200000|200000|NA|3000000|NA",
+    "YTDATA_PROG 251|downloading|1024|50000|NA|NA|NA",
+    "YTDATA_PROG 251|finished|50000|50000|NA|2000000|NA",
+    "YTDATA_POST Merger|started",
+    "YTDATA_POST Merger|finished",
+  ]) {
+    const p = t.update(line);
+    seen.push(Math.round(p.percent));
+    stages.push(`${p.stage}:${p.stream}/${p.streams}`);
+  }
+  expect(seen).toEqual([0, 0, 40, 81, 81, 95, 95, 95]);
+  expect(stages).toEqual([
+    "preparing:0/2",
+    "downloading:1/2",
+    "downloading:1/2",
+    "downloading:1/2",
+    "downloading:2/2",
+    "downloading:2/2",
+    "merging:2/2",
+    "merging:2/2",
+  ]);
+  expect(t.alreadyDownloaded).toBe(false);
+  expect(t.finish().percent).toBe(100);
+});
+
+test("ProgressTracker: bytes, speed, ETA and audio conversion", () => {
+  const t = new ProgressTracker(true);
+  t.update("YTDATA_FMT 251");
+  expect(t.update("YTDATA_PROG 251|downloading|50|NA|100|2048|7")).toMatchObject({
+    downloadedBytes: 50,
+    totalBytes: 100,
+    speed: 2048,
+    eta: 7,
+    streamPercent: 50,
+  });
+  expect(t.update("YTDATA_POST ExtractAudio|started").stage).toBe("converting");
+});
+
+test("ProgressTracker notices already-downloaded files (no bytes transferred)", () => {
+  const t = new ProgressTracker(false);
+  t.update("YTDATA_FMT 18");
+  expect(t.alreadyDownloaded).toBe(true);
+});
+
+test("removePartials deletes only this id's leftovers", () => {
+  const dir = mkdtempSync(join(tmpdir(), "yt-data-partials-"));
+  for (const f of [
+    "T [abc].f398.mp4.part",
+    "T [abc].f140.m4a",
+    "T [abc].mp4.ytdl",
+    "T [abc].mp4",
+    "Other [xyz].mp4.part",
+  ]) {
+    writeFileSync(join(dir, f), "");
+  }
+  expect(removePartials(dir, "abc")).toBe(3);
+  expect(readdirSync(dir).sort()).toEqual(["Other [xyz].mp4.part", "T [abc].mp4"]);
 });

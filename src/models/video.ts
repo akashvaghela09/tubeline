@@ -49,6 +49,16 @@ export const Video = z
     thumbnails: z.array(Image),
     captions: z.array(CaptionTrack),
     chapters: z.array(Chapter),
+    qualities: z
+      .array(
+        z.object({
+          label: z.string().describe('e.g. "1080p"'),
+          bytes: z.number().int().nullable(),
+        }),
+      )
+      .describe(
+        "Available video qualities, best first, with estimated download size (video + audio)",
+      ),
     playability: z
       .object({
         status: z.string().describe('"OK", "LOGIN_REQUIRED" (age/private), "UNPLAYABLE", …'),

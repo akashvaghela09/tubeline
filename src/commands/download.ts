@@ -14,6 +14,7 @@ import {
   type Quality,
   splitArgs,
 } from "../services/download.ts";
+import { progressLine } from "../ui/format.ts";
 
 interface DownloadOptions {
   quality: Quality;
@@ -90,10 +91,16 @@ audio conversion.`,
           const parsed = parseRef(ref);
           if (parsed.kind !== "video")
             throw new CliError("USAGE", `"${ref}" is a ${refKindLabel(parsed)}, not a video`);
-          return download(
+          const cols = process.stderr.columns || 80;
+          const kind = opts.quality === "audio" ? "audio" : "video";
+          const result = await download(
             parsed.id,
-            showProgress ? (p) => process.stderr.write(`${p.line}\n`) : undefined,
+            showProgress
+              ? (p) => process.stderr.write(`\r\x1b[K${progressLine(p, kind, parsed.id, cols - 1)}`)
+              : undefined,
           );
+          if (showProgress) process.stderr.write("\r\x1b[K");
+          return result;
         },
       );
     });

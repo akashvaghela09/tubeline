@@ -79,6 +79,13 @@ describe("docs", () => {
 test("doctor --offline output matches its schema", async () => {
   const r = await run("doctor", "--offline");
   const report = DoctorReport.strict().parse(JSON.parse(r.stdout));
-  expect(report.checks.map((c) => c.name)).toEqual(["yt-dlp", "ffmpeg", "cache dir", "config"]);
+  expect(report.checks.map((c) => c.name)).toEqual([
+    "yt-dlp",
+    "ffmpeg",
+    "interactive ui",
+    "cache dir",
+    "config",
+  ]);
+  expect(report.checks.find((c) => c.name === "interactive ui")?.ok).toBe(true);
   expect(r.code).toBe(0);
 });

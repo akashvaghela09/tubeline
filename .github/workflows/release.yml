@@ -19,6 +19,9 @@ jobs:
       - run: bun test
       - name: Check tag matches package.json version
         run: test "v$(jq -r .version package.json)" = "$GITHUB_REF_NAME"
+      - name: Install native packages for every target
+        # OpenTUI ships its renderer per platform; cross-compiling needs all of them.
+        run: bun install --frozen-lockfile --os='*' --cpu='*'
       - run: bun run build:all
       - name: Generate man page
         run: ./dist/yt-data-linux-x64 docs --man > dist/yt-data.1

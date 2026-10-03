@@ -166,9 +166,12 @@ export async function runYtDlpStreaming(
   path: string,
   args: string[],
   onLine: (line: string) => void,
+  signal?: AbortSignal,
 ): Promise<RunResult> {
   log.debug(`running ${path} ${args.join(" ")}`);
   const proc = Bun.spawn([path, ...args], { stdout: "pipe", stderr: "pipe", stdin: "ignore" });
+  const abort = () => proc.kill();
+  signal?.addEventListener("abort", abort, { once: true });
   const stderrText = new Response(proc.stderr).text();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -184,6 +187,7 @@ export async function runYtDlpStreaming(
   }
   if (buffer) onLine(buffer);
   const [stderr, code] = await Promise.all([stderrText, proc.exited]);
+  signal?.removeEventListener("abort", abort);
   return { code, stdout, stderr };
 }
 

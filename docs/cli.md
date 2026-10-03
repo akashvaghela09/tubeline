@@ -129,7 +129,8 @@ Fields: `id`, `url`, `title`, `description`, `durationSeconds`, `viewCount`, `li
 `channel{id,name,handle,url,subscriberCount,subscriberCountText,isVerified}`, `category`,
 `keywords[]`, `isLive`, `isLiveContent`, `isUpcoming`, `isUnlisted`, `isFamilySafe`,
 `thumbnails[]{url,width,height}`, `captions[]{lang,name,isAuto,isTranslatable}`,
-`chapters[]{title,startSeconds}`, `playability{status,reason}`.
+`chapters[]{title,startSeconds}`, `qualities[]{label,bytes}` (best first, estimated video +
+audio size), `playability{status,reason}`.
 
 `playability.status` is `OK` when the video can be played anonymously; `LOGIN_REQUIRED`
 (age-restricted/private) and `UNPLAYABLE` (members-only, region-blocked, …) still return
@@ -253,21 +254,41 @@ required, since only `download` and the transcript fallback need them.
 
 ### `ui`
 
-Interactive menus for people — also what plain `yt-data` opens at a terminal. Paste a
-link, @handle or id (or search), then:
+Full-screen interactive app for people — also what plain `yt-data` opens at a terminal.
+Built on OpenTUI (native renderer, redraws only on change). Needs an interactive terminal;
+scripts and agents use the regular commands with `--json`.
 
-- **Video:** download video (pick quality) or audio (mp3 / m4a / opus) with a progress bar,
-  view or save the transcript (pick language and format), download the thumbnail, show
-  details, jump to the channel.
-- **Channel / playlist:** browse videos, shorts, live streams or all uploads in a
-  type-to-filter list (50 at a time, "load more"), open one, or **select several** to
-  download them, save their transcripts or thumbnails in one go.
-- **Update** yt-data and yt-dlp, **check setup** (doctor).
+**Home** — one input: paste a URL, `@handle` or id to open it, or type words to search
+(`Tab` cycles videos / shorts / channels / playlists). `↓` reaches recent items, Settings and
+Downloads.
 
-Downloads default to your Downloads folder. Folder, quality and formats you pick are
-remembered for next time (`~/.local/share/yt-data/ui.json`). Esc / Ctrl+C goes back one
-level; at the main menu it quits. Needs an interactive terminal — use the regular
-commands in scripts.
+**Video** — card with views, likes, length, date, caption languages, best quality with an
+estimated size, and "✓ already in <folder>" when you have it. Keys:
+`d` download video (remembered quality/folder) · `D` choose quality & folder ·
+`a` audio (remembered format) · `A` choose format & folder · `t` transcript · `i` thumbnail ·
+`c` channel · `m` details · `o` open in browser.
+
+**Browse** (channel, playlist, search results) — columns: length, views, age, title.
+`Enter` open · `space` select · `*` select all shown · `/` filter · `Tab` next tab
+(videos / shorts / streams / all, or result type) · `d`/`a`/`t`/`i` act on the selection, or
+on the highlighted row when nothing is selected. More results load as you scroll; the
+list, filter and position are kept when you come back.
+
+**Transcript** — readable, scrollable; `s` saves in the remembered format/folder, `S` asks,
+`l` switches language.
+
+**Downloads** — run one at a time in the background while you keep browsing. A panel shows
+`42% ━━━━╸── 4.2/10 MB  2.1 MB/s  ETA 0:05  video 1/2  title…`, then `merging` /
+`converting`, then `✓ size, time, path`. `Ctrl+O` lists every job: `x` cancel (partial files
+are removed), `X` cancel all, `r` retry, `o` open the folder. If a download fails and yt-dlp
+is outdated, the app says so and `Ctrl+U` updates it.
+
+**Everywhere** — `Esc` back · `Ctrl+S` settings (folders, quality, formats) · `Ctrl+U`
+update yt-data & yt-dlp · `Ctrl+K` check setup · `Ctrl+C` quit (asks first while downloads
+run). On exit, the files saved in the session are listed in your terminal.
+
+Defaults: downloads go to your Downloads folder; choices are remembered in
+`~/.local/share/yt-data/ui.json`.
 
 ### `schema [name]`
 
