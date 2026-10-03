@@ -1,6 +1,6 @@
 {
   "name": "yt-data",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Agent-friendly CLI to fetch YouTube channel/video metadata, transcripts, thumbnails and downloads",
   "private": true,
   "type": "module",

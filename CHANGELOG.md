@@ -6,6 +6,8 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-03
+
 ### Fixed
 - `transcript` reported "has no captions" (exit 3) when YouTube had actually bot-checked
   or age-gated the request; it now exits 4 / 5 with the reason.
@@ -47,5 +49,6 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 - Project scaffold: README, plan, CLI spec, release guide, MIT license.
 - Tooling: Bun, TypeScript, Biome; CI, nightly live-test and release workflows; `install.sh`.
 
-[Unreleased]: https://github.com/akashvaghela09/yt-data/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/akashvaghela09/yt-data/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/akashvaghela09/yt-data/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/akashvaghela09/yt-data/releases/tag/v0.1.0
