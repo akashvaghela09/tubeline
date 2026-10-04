@@ -1,6 +1,6 @@
 # tubeline — Project Plan
 
-Status: **v0.4.0 on `dev`** (renamed to tubeline) — v0.2.0 merged to `main`, v0.1.x on `version-1` · Last updated: 2026-10-03
+Status: **v0.4.0 released** (first release as tubeline) — v0.1.x on `version-1` · Last updated: 2026-10-03
 
 ## 1. Goal
 

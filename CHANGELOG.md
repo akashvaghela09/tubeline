@@ -31,7 +31,7 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
   a 404; those are now skipped so the best real size is saved (maxres → sd → hq → mq →
   default). Thumbnails saved from the app are named `Title [id].jpg`.
 
-## [0.3.0] - 2026-10-03
+## 0.3.0 - 2026-10-03 (development version, released as part of 0.4.0)
 
 ### Changed
 - **New interactive app** (`tubeline` / `tubeline ui`), rebuilt as a full-screen UI on
@@ -70,7 +70,7 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 ### Removed
 - The 0.2.0 prompt-based menus (@clack/prompts).
 
-## [0.2.0] - 2026-10-03
+## 0.2.0 - 2026-10-03 (development version, released as part of 0.4.0)
 
 ### Added
 - Interactive menus: `tubeline ui`, or plain `tubeline` at a terminal. Open a link or search,
@@ -134,8 +134,6 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 - Tooling: Bun, TypeScript, Biome; CI, nightly live-test and release workflows; `install.sh`.
 
 [Unreleased]: https://github.com/akashvaghela09/tubeline/compare/v0.4.0...HEAD
-[0.4.0]: https://github.com/akashvaghela09/tubeline/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/akashvaghela09/tubeline/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/akashvaghela09/tubeline/compare/v0.1.1...v0.2.0
+[0.4.0]: https://github.com/akashvaghela09/tubeline/compare/v0.1.1...v0.4.0
 [0.1.1]: https://github.com/akashvaghela09/tubeline/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/akashvaghela09/tubeline/releases/tag/v0.1.0
