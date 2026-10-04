@@ -110,8 +110,8 @@ export function useKeys(keys: Hint[]) {
   useEffect(() => ui.setKeys(keys), [sig]);
 }
 
-/** Debug aid: YT_DATA_UI_KEYLOG=/path logs every key event the UI receives. */
-const KEYLOG = process.env.YT_DATA_UI_KEYLOG;
+/** Debug aid: TUBELINE_UI_KEYLOG=/path logs every key event the UI receives. */
+const KEYLOG = process.env.TUBELINE_UI_KEYLOG;
 
 export function App({
   services,
@@ -130,7 +130,7 @@ export function App({
   const [stack, setStack] = useState<Screen[]>([{ kind: "home" }]);
   const [themeKey, setThemeKey] = useState(() => {
     const name = resolveTheme(
-      normalizeTheme(process.env.YT_DATA_THEME ?? prefs.theme),
+      normalizeTheme(process.env.TUBELINE_THEME ?? prefs.theme),
       terminalMode,
     );
     applyTheme(name);
@@ -164,7 +164,7 @@ export function App({
     void services.ytDlpAge().then((age) => {
       if (age !== null && age > 30) {
         showToast(
-          `yt-data's downloader (yt-dlp) is ${age} days old — press Ctrl+U to update it`,
+          `tubeline's downloader (yt-dlp) is ${age} days old — press Ctrl+U to update it`,
           "error",
         );
       }
@@ -320,7 +320,7 @@ function checkSetup(ui: Ui) {
 }
 
 function updateAll(ui: Ui) {
-  ui.toast("Updating yt-data and its downloader (yt-dlp)…");
+  ui.toast("Updating tubeline and its downloader (yt-dlp)…");
   void ui.services
     .update()
     .then((text) => {
@@ -328,7 +328,7 @@ function updateAll(ui: Ui) {
       ui.push({
         kind: "viewer",
         title: "Update",
-        text: `${text}\nRestart yt-data to use a new yt-data version.`,
+        text: `${text}\nRestart tubeline to use a new tubeline version.`,
       });
     })
     .catch((err: Error) => ui.toast(err.message, "error"));
@@ -336,7 +336,7 @@ function updateAll(ui: Ui) {
 
 export const actions = { checkSetup, updateAll };
 
-/** "yt-data › Marques Brownlee › Xiaomi 18 Pro Max › transcript". */
+/** "tubeline › Marques Brownlee › Xiaomi 18 Pro Max › transcript". */
 function Header({ crumbs, width }: { crumbs: string[]; width: number }) {
   const room = Math.max(10, width - 2 - 8);
   const parts = [...crumbs];
@@ -354,7 +354,7 @@ function Header({ crumbs, width }: { crumbs: string[]; width: number }) {
   return (
     <text wrapMode="none" truncate>
       <span fg={theme.accent}>
-        <strong> yt-data</strong>
+        <strong> tubeline</strong>
       </span>
       {parts.map((p, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: positional crumbs

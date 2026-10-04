@@ -10,7 +10,7 @@ import type { Prefs } from "../../src/ui/prefs.ts";
 import { fakeServices } from "./fake.ts";
 
 // savePrefs() writes ui.json under the data dir: never let tests touch the real one.
-process.env.XDG_DATA_HOME = mkdtempSync(join(tmpdir(), "yt-data-ui-home-"));
+process.env.XDG_DATA_HOME = mkdtempSync(join(tmpdir(), "tubeline-ui-home-"));
 
 export async function harness(
   opts: Parameters<typeof fakeServices>[0] & {
@@ -20,7 +20,7 @@ export async function harness(
   } = {},
 ) {
   const { services, log } = fakeServices(opts);
-  const tmp = mkdtempSync(join(tmpdir(), "yt-data-ui-"));
+  const tmp = mkdtempSync(join(tmpdir(), "tubeline-ui-"));
   const prefs: Prefs = {
     recent: [],
     recentDirs: [],

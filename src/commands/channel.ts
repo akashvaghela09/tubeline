@@ -17,11 +17,11 @@ export function registerChannel(program: Command, getCtx: () => AppContext) {
       "after",
       `
 Examples:
-  yt-data channel @mkbhd
-  yt-data channel https://www.youtube.com/@mkbhd --fields name,subscriberCount,videoCount
-  yt-data channel UCBJycsmduvYEL83R_U4JriQ @LinusTechTips --format table
+  tubeline channel @mkbhd
+  tubeline channel https://www.youtube.com/@mkbhd --fields name,subscriberCount,videoCount
+  tubeline channel UCBJycsmduvYEL83R_U4JriQ @LinusTechTips --format table
 
-Output schema: yt-data schema channel`,
+Output schema: tubeline schema channel`,
     )
     .action(async (refs: string[], opts: { fields?: string }) => {
       const ctx = getCtx();

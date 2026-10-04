@@ -54,7 +54,7 @@ export async function updateNotice(
     }
   }
   if (state.latest && compareVersions(state.latest, pkg.version) > 0) {
-    return `yt-data ${state.latest} is available (you have ${pkg.version}). Run \`yt-data update\`.`;
+    return `tubeline ${state.latest} is available (you have ${pkg.version}). Run \`tubeline update\`.`;
   }
   return null;
 }

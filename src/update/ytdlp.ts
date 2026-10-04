@@ -19,7 +19,7 @@ export function ytDlpAsset(platform = process.platform, arch = process.arch): st
   throw new CliError(
     "USAGE",
     `No yt-dlp binary for ${platform}-${arch}`,
-    "Install yt-dlp yourself and set YT_DATA_YTDLP",
+    "Install yt-dlp yourself and set TUBELINE_YTDLP",
   );
 }
 
@@ -93,7 +93,7 @@ export async function updateYtDlp(fetchFn: FetchFn, channel: YtDlpChannel) {
     throw new CliError(
       "INTERNAL",
       "The installed yt-dlp doesn't run",
-      "Please report this with `yt-data doctor -v`",
+      "Please report this with `tubeline doctor -v`",
     );
   return {
     action: before ? ("updated" as const) : ("installed" as const),

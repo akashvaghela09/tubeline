@@ -1,18 +1,18 @@
-# yt-data — CLI Reference
+# tubeline — CLI Reference
 
-Agent-friendly CLI for YouTube data. Start here; `yt-data <command> --help` has the same
-options, `yt-data schema <name>` prints JSON Schemas, and `man yt-data` works after
-`yt-data docs --install-man`.
+Agent-friendly CLI for YouTube data. Start here; `tubeline <command> --help` has the same
+options, `tubeline schema <name>` prints JSON Schemas, and `man tubeline` works after
+`tubeline docs --install-man`.
 
 **Agents and scripts:** pass `--json` (or just pipe the output — JSON is the default
 whenever stdout isn't a terminal). Commands never prompt. People at a terminal get
-readable output by default, and plain `yt-data` opens interactive menus (`yt-data ui`).
+readable output by default, and plain `tubeline` opens interactive menus (`tubeline ui`).
 
 ## Synopsis
 
 ```
-yt-data <command> [options] [refs...]
-yt-data            # interactive menus, at a terminal
+tubeline <command> [options] [refs...]
+tubeline            # interactive menus, at a terminal
 ```
 
 `ref` = video/channel/playlist URL, `youtu.be/<id>`, `@handle`, `UC…` channel id,
@@ -49,9 +49,9 @@ Fields: `id`, `handle`, `name`, `description`, `url`, `subscriberCount`,
 `banner{…}`, `rssUrl`.
 
 ```
-yt-data channel @mkbhd
-yt-data channel https://www.youtube.com/@mkbhd --fields name,subscriberCount,videoCount
-yt-data channel @mkbhd @LinusTechTips --format table --fields name,subscriberCount
+tubeline channel @mkbhd
+tubeline channel https://www.youtube.com/@mkbhd --fields name,subscriberCount,videoCount
+tubeline channel @mkbhd @LinusTechTips --format table --fields name,subscriberCount
 ```
 
 ### `videos <ref>`
@@ -83,11 +83,11 @@ Notes:
   skipped; the exit code reflects the first failure.
 
 ```
-yt-data videos @mkbhd --limit 10 --fields id,title,viewCount,publishedText
-yt-data videos @mkbhd --type shorts --sort popular -n 20
-yt-data videos @mkbhd --limit 0 --format ndjson > all.ndjson
-yt-data videos @mkbhd --since 30d --full --fields id,title,publishedAt,likeCount
-yt-data videos https://www.youtube.com/playlist?list=PLBsP89CPrMeO7uztAu6YxSB10cRMpjgiY
+tubeline videos @mkbhd --limit 10 --fields id,title,viewCount,publishedText
+tubeline videos @mkbhd --type shorts --sort popular -n 20
+tubeline videos @mkbhd --limit 0 --format ndjson > all.ndjson
+tubeline videos @mkbhd --since 30d --full --fields id,title,publishedAt,likeCount
+tubeline videos https://www.youtube.com/playlist?list=PLBsP89CPrMeO7uztAu6YxSB10cRMpjgiY
 ```
 
 ### `search <query...>`
@@ -113,11 +113,11 @@ Playlist results: `type`, `id`, `url`, `title`, `channelName`, `videoCount`, `up
 `thumbnail`.
 
 ```
-yt-data search mkbhd iphone review
-yt-data search "lofi hip hop" --type playlist -n 5
-yt-data search mkbhd --type channel --json --fields id,name,subscriberCount
-yt-data search "rust tutorial" --duration long --uploaded year --sort popularity
-yt-data search cats --type shorts --json | jq -r '.[].id' | yt-data download - --quality 720p
+tubeline search mkbhd iphone review
+tubeline search "lofi hip hop" --type playlist -n 5
+tubeline search mkbhd --type channel --json --fields id,name,subscriberCount
+tubeline search "rust tutorial" --duration long --uploaded year --sort popularity
+tubeline search cats --type shorts --json | jq -r '.[].id' | tubeline download - --quality 720p
 ```
 
 ### `video <ref...>`
@@ -137,8 +137,8 @@ audio size), `playability{status,reason}`.
 metadata.
 
 ```
-yt-data video dQw4w9WgXcQ
-cat ids.txt | yt-data video - --format ndjson
+tubeline video dQw4w9WgXcQ
+cat ids.txt | tubeline video - --format ndjson
 ```
 
 ### `transcript <refs...>`
@@ -165,11 +165,11 @@ Machine-translated languages (a `--lang` with no native track) are best-effort: 
 often answers anonymous translation requests with HTTP 429 (exit 4); `--cookies` helps.
 
 ```
-yt-data transcript dQw4w9WgXcQ --as txt
-yt-data transcript dQw4w9WgXcQ --as txt --timestamps
-yt-data transcript e1q-TuHdc4Y --lang ja --as srt -o talk.ja.srt
-yt-data transcript dQw4w9WgXcQ --list
-yt-data videos @mkbhd -n 5 -f ndjson --fields id | jq -r .id | yt-data transcript - --as txt -o ./transcripts
+tubeline transcript dQw4w9WgXcQ --as txt
+tubeline transcript dQw4w9WgXcQ --as txt --timestamps
+tubeline transcript e1q-TuHdc4Y --lang ja --as srt -o talk.ja.srt
+tubeline transcript dQw4w9WgXcQ --list
+tubeline videos @mkbhd -n 5 -f ndjson --fields id | jq -r .id | tubeline transcript - --as txt -o ./transcripts
 ```
 
 ### `thumbnail <refs...>`
@@ -184,8 +184,8 @@ Output: `{id, quality, url, width, height, path, sizeBytes}` (`path`/`sizeBytes`
 `--url-only`).
 
 ```
-yt-data thumbnail dQw4w9WgXcQ -o ./thumbs
-yt-data thumbnail dQw4w9WgXcQ --quality hq --url-only --fields url
+tubeline thumbnail dQw4w9WgXcQ -o ./thumbs
+tubeline thumbnail dQw4w9WgXcQ --quality hq --url-only --fields url
 ```
 
 ### `download <refs...>`
@@ -209,23 +209,23 @@ pre-merged files are available (usually ≤360p, with a warning) and audio stays
 Age-restricted / members-only videos need `--cookies` or `--cookies-from-browser`.
 
 ```
-yt-data download dQw4w9WgXcQ --quality 1080p -o ./downloads
-yt-data download dQw4w9WgXcQ --quality audio --audio-format mp3
-yt-data download dQw4w9WgXcQ --with-subs en,de --with-thumbnail
-yt-data videos @mkbhd -n 3 -f ndjson --fields id | jq -r .id | yt-data download - --quality 720p
+tubeline download dQw4w9WgXcQ --quality 1080p -o ./downloads
+tubeline download dQw4w9WgXcQ --quality audio --audio-format mp3
+tubeline download dQw4w9WgXcQ --with-subs en,de --with-thumbnail
+tubeline videos @mkbhd -n 3 -f ndjson --fields id | jq -r .id | tubeline download - --quality 720p
 ```
 
 ### `update`
 
-Updates yt-data itself (release binaries only) and installs / updates the **managed**
-yt-dlp in the data directory (`~/.local/share/yt-data/bin/yt-dlp` on Linux). Every download
+Updates tubeline itself (release binaries only) and installs / updates the **managed**
+yt-dlp in the data directory (`~/.local/share/tubeline/bin/yt-dlp` on Linux). Every download
 is checked against the release's SHA-256 checksums and swapped in atomically. A
 system-installed yt-dlp is never modified; once the managed copy exists it takes
 precedence, and the output says how to upgrade the system one.
 
 | Option | Description |
 |---|---|
-| `--self` | Only update yt-data |
+| `--self` | Only update tubeline |
 | `--yt-dlp` | Only install / update the managed yt-dlp |
 | `--check` | Report current and latest versions as JSON; change nothing |
 | `--yt-dlp-channel <c>` | `stable` (default) or `nightly` (YouTube fixes often land there first) |
@@ -234,8 +234,8 @@ Output: `{self: {action, from, to, …}, ytDlp: {action, path, from, to, channel
 `action` one of `installed`, `updated`, `current`, `skipped`, `failed`. When running from
 source, self-update is skipped.
 
-A once-a-day check prints "yt-data X is available" to stderr — only when stderr is a
-terminal. Disable with `YT_DATA_NO_UPDATE_CHECK=1` or `"updateCheck": false`.
+A once-a-day check prints "tubeline X is available" to stderr — only when stderr is a
+terminal. Disable with `TUBELINE_NO_UPDATE_CHECK=1` or `"updateCheck": false`.
 
 ### `doctor`
 
@@ -254,7 +254,7 @@ required, since only `download` and the transcript fallback need them.
 
 ### `ui`
 
-Full-screen interactive app for people — also what plain `yt-data` opens at a terminal.
+Full-screen interactive app for people — also what plain `tubeline` opens at a terminal.
 Built on OpenTUI (native renderer, redraws only on change). Needs an interactive terminal;
 scripts and agents use the regular commands with `--json`. Press **`?`** anywhere for every
 key.
@@ -292,17 +292,17 @@ scroll; the list, filter and position are kept when you come back.
 
 **Everywhere** — `Esc` or `Backspace` back (Backspace edits text while you type) ·
 `Ctrl+C` returns to Home; on Home it quits (asks first while downloads run) · `Ctrl+S`
-settings · `Ctrl+U` update yt-data & yt-dlp · `Ctrl+K` check setup · `?` keys. On exit,
+settings · `Ctrl+U` update tubeline & yt-dlp · `Ctrl+K` check setup · `?` keys. On exit,
 the files saved in the session are listed in your terminal.
 
 **Themes** — Settings › Appearance › Theme, previewed live as you move through the list:
 Auto (default: Night or Day to match your terminal's background), Night, Day, Gruvbox,
 Solarized Light, High contrast, and more (Catppuccin Mocha, Nord, Dracula, GitHub Light).
-Every theme paints its own background. Override per run with `yt-data ui --theme <name>`
-or `YT_DATA_THEME`.
+Every theme paints its own background. Override per run with `tubeline ui --theme <name>`
+or `TUBELINE_THEME`.
 
 Defaults: downloads go to your Downloads folder; choices are remembered in
-`~/.local/share/yt-data/ui.json`.
+`~/.local/share/tubeline/ui.json`.
 
 ### `schema [name]`
 
@@ -312,8 +312,8 @@ JSON Schema (draft 2020-12) of an output shape. Without a name, lists them:
 name.
 
 ```
-yt-data schema video
-yt-data schema --all > schemas.json
+tubeline schema video
+tubeline schema --all > schemas.json
 ```
 
 ### `docs`
@@ -322,7 +322,7 @@ yt-data schema --all > schemas.json
 |---|---|
 | (none) | Print this reference as markdown |
 | `--man` | Print the man page (roff), generated from the command definitions |
-| `--install-man` | Write the man page to `~/.local/share/man/man1/yt-data.1` |
+| `--install-man` | Write the man page to `~/.local/share/man/man1/tubeline.1` |
 
 ## Output and errors
 
@@ -358,24 +358,24 @@ yt-data schema --all > schemas.json
 
 ## Caching
 
-Results are cached under the cache directory (`~/.cache/yt-data` on Linux): handle → id
+Results are cached under the cache directory (`~/.cache/tubeline` on Linux): handle → id
 lookups for 7 days, channels for 6 hours, videos for 1 hour, plus the InnerTube visitor
-session (3 days). Listings are never cached. Entries are discarded when yt-data is upgraded.
+session (3 days). Listings are never cached. Entries are discarded when tubeline is upgraded.
 
 ## Environment
 
 | Variable | Meaning |
 |---|---|
-| `YT_DATA_CONFIG` | Config file path (default `~/.config/yt-data/config.json`) |
-| `YT_DATA_CACHE_DIR` | Cache directory |
-| `YT_DATA_NO_CACHE` | `1` = like `--no-cache` |
-| `YT_DATA_NO_UPDATE_CHECK` | `1` = no daily update notice |
-| `YT_DATA_YTDLP` | Use this yt-dlp executable |
-| `YT_DATA_COOKIES` | Like `--cookies` |
-| `YT_DATA_COOKIES_FROM_BROWSER` | Like `--cookies-from-browser` |
-| `YT_DATA_PROXY` | Like `--proxy` |
-| `YT_DATA_LOG` | `silent`, `error`, `warn` (default), `info`, `debug` |
-| `YT_DATA_THEME` | Interactive app theme for this run (`auto`, `night`, `day`, …) |
+| `TUBELINE_CONFIG` | Config file path (default `~/.config/tubeline/config.json`) |
+| `TUBELINE_CACHE_DIR` | Cache directory |
+| `TUBELINE_NO_CACHE` | `1` = like `--no-cache` |
+| `TUBELINE_NO_UPDATE_CHECK` | `1` = no daily update notice |
+| `TUBELINE_YTDLP` | Use this yt-dlp executable |
+| `TUBELINE_COOKIES` | Like `--cookies` |
+| `TUBELINE_COOKIES_FROM_BROWSER` | Like `--cookies-from-browser` |
+| `TUBELINE_PROXY` | Like `--proxy` |
+| `TUBELINE_LOG` | `silent`, `error`, `warn` (default), `info`, `debug` |
+| `TUBELINE_THEME` | Interactive app theme for this run (`auto`, `night`, `day`, …) |
 | `GITHUB_TOKEN` | Optional; raises GitHub API limits for `update` |
 
 Config file keys: `format`, `region`, `cookies`, `cookiesFromBrowser`, `proxy`, `cacheDir`,

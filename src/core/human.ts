@@ -216,7 +216,7 @@ export function doctorHuman(items: unknown[]): string {
   const verdict = report.ok
     ? c.green("All required checks passed.")
     : c.red("Some required checks failed.");
-  return `${c.dim(`yt-data ${report.version} (${report.platform})`)}\n${lines.join("\n")}\n\n${verdict}\n`;
+  return `${c.dim(`tubeline ${report.version} (${report.platform})`)}\n${lines.join("\n")}\n\n${verdict}\n`;
 }
 
 function describeUpdate(name: string, r: Record<string, unknown> | undefined): string | null {
@@ -246,7 +246,7 @@ function describeUpdate(name: string, r: Record<string, unknown> | undefined): s
 
 export function updateHuman(items: unknown[]): string {
   const r = items[0] as { self?: Record<string, unknown>; ytDlp?: Record<string, unknown> };
-  const lines = [describeUpdate("yt-data", r.self), describeUpdate("yt-dlp", r.ytDlp)].filter(
+  const lines = [describeUpdate("tubeline", r.self), describeUpdate("yt-dlp", r.ytDlp)].filter(
     Boolean,
   );
   const sys = r.ytDlp?.systemYtDlp as

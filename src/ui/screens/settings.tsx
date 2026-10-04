@@ -205,8 +205,8 @@ export function SettingsScreen({ model }: { model: { cursor: number } }) {
       key: "update",
       group: "Maintenance",
       label: "Update",
-      value: "yt-data and yt-dlp  (^U)",
-      help: "Downloads the latest yt-data and yt-dlp (the downloader YouTube changes often break).",
+      value: "tubeline and yt-dlp  (^U)",
+      help: "Downloads the latest tubeline and yt-dlp (the downloader YouTube changes often break).",
       edit: () => appActions.updateAll(ui),
     },
     {
@@ -268,7 +268,7 @@ export function SettingsScreen({ model }: { model: { cursor: number } }) {
       <Blank />
       <Line fg={theme.dim}>{rows[cursor]?.help ?? ""}</Line>
       <Blank />
-      <Line fg={theme.faint}>{`yt-data ${ui.services.version}`}</Line>
+      <Line fg={theme.faint}>{`tubeline ${ui.services.version}`}</Line>
     </box>
   );
 }

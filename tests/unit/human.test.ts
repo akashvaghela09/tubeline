@@ -97,7 +97,7 @@ test("doctorHuman and updateHuman", () => {
       ytDlp: { action: "current", to: "2026.08.19" },
     },
   ]);
-  expect(u).toContain("yt-data: updated 1.0.0 → 1.1.0");
+  expect(u).toContain("tubeline: updated 1.0.0 → 1.1.0");
   expect(u).toContain("yt-dlp: 2026.08.19 is already the latest");
 });
 
@@ -113,7 +113,7 @@ test("formatError: JSON by default, readable when enabled", () => {
 });
 
 test("output format: human at a terminal, JSON otherwise, --json wins", () => {
-  const env = { YT_DATA_CONFIG: "/nonexistent.json" };
+  const env = { TUBELINE_CONFIG: "/nonexistent.json" };
   expect(loadConfig({}, env, true).format).toBe("human");
   expect(loadConfig({}, env, false).format).toBe("json");
   expect(loadConfig({ json: true }, env, true).format).toBe("json");

@@ -1,4 +1,4 @@
-// Entry for the interactive UI (OpenTUI). Loaded lazily by `yt-data ui`.
+// Entry for the interactive UI (OpenTUI). Loaded lazily by `tubeline ui`.
 import { createCliRenderer } from "@opentui/core";
 import { createRoot } from "@opentui/react";
 import type { AppContext } from "../core/context.ts";
@@ -36,7 +36,7 @@ export async function runWith(services: UiServices): Promise<void> {
   const saved = jobs.all().filter((j) => j.status === "done" && j.path);
   const failed = jobs.all().filter((j) => j.status === "failed");
   if (saved.length || failed.length) {
-    process.stdout.write("yt-data session:\n");
+    process.stdout.write("tubeline session:\n");
     for (const j of saved)
       process.stdout.write(`  ✓ ${j.path}${j.bytes !== null ? ` (${bytes(j.bytes)})` : ""}\n`);
     for (const j of failed)

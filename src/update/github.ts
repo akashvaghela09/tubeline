@@ -11,7 +11,7 @@ export interface Release {
 export async function latestRelease(fetchFn: FetchFn, repo: string): Promise<Release | null> {
   const headers: Record<string, string> = {
     accept: "application/vnd.github+json",
-    "user-agent": "yt-data",
+    "user-agent": "tubeline",
   };
   if (process.env.GITHUB_TOKEN) headers.authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
   const res = await fetchFn(`https://api.github.com/repos/${repo}/releases/latest`, { headers });
@@ -35,7 +35,7 @@ export async function latestRelease(fetchFn: FetchFn, repo: string): Promise<Rel
 }
 
 export async function download(fetchFn: FetchFn, url: string): Promise<Uint8Array> {
-  const res = await fetchFn(url, { headers: { "user-agent": "yt-data" } });
+  const res = await fetchFn(url, { headers: { "user-agent": "tubeline" } });
   if (!res.ok) throw new CliError("NETWORK", `Download failed: HTTP ${res.status} for ${url}`);
   return new Uint8Array(await res.arrayBuffer());
 }

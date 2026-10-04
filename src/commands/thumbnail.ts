@@ -42,9 +42,9 @@ export function registerThumbnail(program: Command, getCtx: () => AppContext) {
       "after",
       `
 Examples:
-  yt-data thumbnail dQw4w9WgXcQ
-  yt-data thumbnail dQw4w9WgXcQ --quality hq -o ./thumbs
-  yt-data thumbnail dQw4w9WgXcQ --url-only --fields url
+  tubeline thumbnail dQw4w9WgXcQ
+  tubeline thumbnail dQw4w9WgXcQ --quality hq -o ./thumbs
+  tubeline thumbnail dQw4w9WgXcQ --url-only --fields url
 
 Output: {id, quality, url, width, height, path, sizeBytes} (path/sizeBytes are null with --url-only).`,
     )
@@ -60,22 +60,59 @@ Output: {id, quality, url, width, height, path, sizeBytes} (path/sizeBytes are n
     });
 }
 
+/** Width and height of a JPEG, read from its SOF marker; null if it isn't one. */
+export function jpegSize(bytes: Uint8Array): { width: number; height: number } | null {
+  if (bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
+  let i = 2;
+  while (i + 9 < bytes.length) {
+    if (bytes[i] !== 0xff) {
+      i++;
+      continue;
+    }
+    const marker = bytes[i + 1] as number;
+    // SOF0–SOF15 carry the frame size (except DHT C4, JPG C8, DAC CC).
+    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+      const height = ((bytes[i + 5] as number) << 8) | (bytes[i + 6] as number);
+      const width = ((bytes[i + 7] as number) << 8) | (bytes[i + 8] as number);
+      return { width, height };
+    }
+    const len = ((bytes[i + 2] as number) << 8) | (bytes[i + 3] as number);
+    i += 2 + len;
+  }
+  return null;
+}
+
+/** YouTube answers some missing sizes with a 120×90 grey placeholder instead of a 404. */
+const PLACEHOLDER_MAX_WIDTH = 120;
+
+/**
+ * Best available thumbnail: maxres → sd → hq → mq → default (or from `quality` down),
+ * skipping sizes YouTube doesn't have — both 404s and its 120px placeholder images.
+ */
 export async function fetchThumbnail(
   fetchFn: FetchFn,
   id: string,
-  opts: Pick<ThumbnailOptions, "quality" | "output" | "urlOnly">,
+  opts: Pick<ThumbnailOptions, "quality" | "output" | "urlOnly"> & { filename?: string },
 ) {
   const start =
     opts.quality === "best" ? 0 : THUMB_SIZES.findIndex((s) => s.quality === opts.quality);
   for (const size of THUMB_SIZES.slice(start)) {
     const url = `https://i.ytimg.com/vi/${id}/${size.file}`;
-    const res = await fetchFn(url, { method: opts.urlOnly ? "HEAD" : "GET" });
+    const res = await fetchFn(url);
     if (res.status === 404) continue;
     if (!res.ok) throw new CliError("NETWORK", `Thumbnail request failed: HTTP ${res.status}`);
-    const base = { id, quality: size.quality, url, width: size.width, height: size.height };
-    if (opts.urlOnly) return { ...base, path: null, sizeBytes: null };
     const bytes = new Uint8Array(await res.arrayBuffer());
-    const path = join(opts.output, `${id}.jpg`);
+    const real = jpegSize(bytes);
+    if (size.quality !== "default" && real && real.width <= PLACEHOLDER_MAX_WIDTH) continue;
+    const base = {
+      id,
+      quality: size.quality,
+      url,
+      width: real?.width ?? size.width,
+      height: real?.height ?? size.height,
+    };
+    if (opts.urlOnly) return { ...base, path: null, sizeBytes: null };
+    const path = join(opts.output, opts.filename ?? `${id}.jpg`);
     writeFileSync(path, bytes);
     return { ...base, path, sizeBytes: bytes.length };
   }

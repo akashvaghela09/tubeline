@@ -42,7 +42,8 @@ export interface UiServices {
   search(query: string, type: SearchType): AsyncGenerator<SearchResult>;
   getTranscript(id: string, lang?: string): Promise<Transcript>;
   saveTranscript(t: Transcript, title: string, format: TranscriptChoice, dir: string): string;
-  thumbnail(id: string, dir: string): Promise<string>;
+  /** Best available thumbnail, saved as "<title> [<id>].jpg" when a title is given. */
+  thumbnail(id: string, dir: string, title?: string): Promise<string>;
   download(
     id: string,
     spec: DownloadSpec,
@@ -93,8 +94,13 @@ export function realServices(ctx: AppContext): UiServices {
       writeFileSync(path, body);
       return path;
     },
-    thumbnail: async (id, dir) => {
-      const r = await fetchThumbnail(ctx.fetch, id, { quality: "best", output: dir });
+    thumbnail: async (id, dir, title) => {
+      mkdirSync(dir, { recursive: true });
+      const r = await fetchThumbnail(ctx.fetch, id, {
+        quality: "best",
+        output: dir,
+        filename: title ? `${safeName(title)} [${id}].jpg` : undefined,
+      });
       return r.path as string;
     },
     download(id, spec, onProgress, signal) {

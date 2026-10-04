@@ -55,14 +55,14 @@ export function registerDownload(program: Command, getCtx: () => AppContext) {
       "after",
       `
 Examples:
-  yt-data download dQw4w9WgXcQ
-  yt-data download dQw4w9WgXcQ --quality 1080p -o ./downloads
-  yt-data download dQw4w9WgXcQ --quality audio --audio-format mp3
-  yt-data download dQw4w9WgXcQ --with-subs en,de --with-thumbnail
-  yt-data download dQw4w9WgXcQ --yt-dlp-args "--limit-rate 2M"
+  tubeline download dQw4w9WgXcQ
+  tubeline download dQw4w9WgXcQ --quality 1080p -o ./downloads
+  tubeline download dQw4w9WgXcQ --quality audio --audio-format mp3
+  tubeline download dQw4w9WgXcQ --with-subs en,de --with-thumbnail
+  tubeline download dQw4w9WgXcQ --yt-dlp-args "--limit-rate 2M"
 
 Output: {id, title, path, ext, formatId, resolution, sizeBytes}
-Requires yt-dlp (system, or managed via \`yt-data update --yt-dlp\`); ffmpeg for >360p and
+Requires yt-dlp (system, or managed via \`tubeline update --yt-dlp\`); ffmpeg for >360p and
 audio conversion.`,
     )
     .action(async (refs: string[], opts: DownloadOptions) => {

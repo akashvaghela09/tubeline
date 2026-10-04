@@ -24,16 +24,16 @@ test.each([
   expect(err.message).not.toContain("ERROR:");
 });
 
-test("findYtDlp honours YT_DATA_YTDLP", () => {
-  const dir = mkdtempSync(join(tmpdir(), "yt-data-ytdlp-"));
+test("findYtDlp honours TUBELINE_YTDLP", () => {
+  const dir = mkdtempSync(join(tmpdir(), "tubeline-ytdlp-"));
   const bin = join(dir, "yt-dlp");
   writeFileSync(bin, "");
-  expect(findYtDlp({ YT_DATA_YTDLP: bin })).toEqual({ path: bin, kind: "env" });
-  expect(() => findYtDlp({ YT_DATA_YTDLP: join(dir, "missing") })).toThrow(CliError);
+  expect(findYtDlp({ TUBELINE_YTDLP: bin })).toEqual({ path: bin, kind: "env" });
+  expect(() => findYtDlp({ TUBELINE_YTDLP: join(dir, "missing") })).toThrow(CliError);
 });
 
 test("findYtDlp falls back to the managed copy, else null", () => {
-  const data = mkdtempSync(join(tmpdir(), "yt-data-home-"));
+  const data = mkdtempSync(join(tmpdir(), "tubeline-home-"));
   const env = { XDG_DATA_HOME: data, PATH: "/nonexistent" };
   if (process.platform !== "linux") return;
   expect(findYtDlp(env as NodeJS.ProcessEnv)).toBeNull();

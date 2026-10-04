@@ -24,11 +24,11 @@ interface UpdateOptions {
 export function registerUpdate(program: Command, getCtx: () => AppContext) {
   program
     .command("update")
-    .summary("update yt-data and the managed yt-dlp")
+    .summary("update tubeline and the managed yt-dlp")
     .description(
-      "Update yt-data itself (release binaries only) and install/update the managed yt-dlp. Downloads are verified against published SHA-256 checksums and swapped in atomically. A system-installed yt-dlp is never modified.",
+      "Update tubeline itself (release binaries only) and install/update the managed yt-dlp. Downloads are verified against published SHA-256 checksums and swapped in atomically. A system-installed yt-dlp is never modified.",
     )
-    .option("--self", "only update yt-data")
+    .option("--self", "only update tubeline")
     .option("--yt-dlp", "only install/update the managed yt-dlp")
     .option("--check", "report available updates without changing anything")
     .addOption(
@@ -41,9 +41,9 @@ export function registerUpdate(program: Command, getCtx: () => AppContext) {
       "after",
       `
 Examples:
-  yt-data update                 # both
-  yt-data update --check         # what would change
-  yt-data update --yt-dlp --yt-dlp-channel nightly
+  tubeline update                 # both
+  tubeline update --check         # what would change
+  tubeline update --yt-dlp --yt-dlp-channel nightly
 
 Output: {self: {...}, ytDlp: {...}} with an "action" of installed / updated / current / skipped.
 Once installed, the managed yt-dlp is used in preference to one on PATH.`,

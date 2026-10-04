@@ -1,6 +1,6 @@
-# yt-data — Project Plan
+# tubeline — Project Plan
 
-Status: **v0.3.0 on `dev`** (OpenTUI app) — v0.2.0 merged to `main`, v0.1.x on `version-1` · Last updated: 2026-10-03
+Status: **v0.4.0 on `dev`** (renamed to tubeline) — v0.2.0 merged to `main`, v0.1.x on `version-1` · Last updated: 2026-10-03
 
 ## 1. Goal
 
@@ -27,14 +27,14 @@ page and machine-readable output.
 | Downloads | `yt-dlp` subprocess (+ `ffmpeg` for merging) | Most actively maintained against YouTube changes. |
 | yt-dlp provisioning | Managed binary in the data dir if installed (`update --yt-dlp`), else system `yt-dlp` | Works out of the box; an explicit install beats a possibly stale distro package; system installs are never modified. |
 | Browser automation | Not in v1; optional Playwright fallback later | ~300 MB Chromium is overkill for JSON endpoints. |
-| CLI name | `yt-data` | |
+| CLI name | `tubeline` | |
 | License | MIT | |
 | Transcripts w/o captions | Not in v1 | Keep v1 small. |
 
 ## 3. Architecture
 
 ```
-            ┌──────────────────────────── yt-data (Bun binary) ───────────────────────────┐
+            ┌──────────────────────────── tubeline (Bun binary) ───────────────────────────┐
  argv ───▶  │ cli.ts ─▶ commands/*  ─▶ core (resolve, output, errors, cache, config)      │ ─▶ stdout (data)
             │                 │                                                          │ ─▶ stderr (logs/errors)
             │                 ├─▶ sources/innertube.ts  ── youtubei.js ── HTTPS ──▶ youtube.com/youtubei/v1/*
@@ -68,11 +68,11 @@ src/
     self.ts ytdlp.ts check.ts
 scripts/
   build-all.ts           # cross-compile release binaries + checksums
-  gen-man.ts             # generate man/yt-data.1 from command definitions
+  gen-man.ts             # generate man/tubeline.1 from command definitions
 tests/
   unit/                  # resolve, output, parsers (fixtures)
   fixtures/              # recorded InnerTube JSON (sanitised)
-  live/                  # opt-in tests against real YouTube (YT_DATA_LIVE=1)
+  live/                  # opt-in tests against real YouTube (TUBELINE_LIVE=1)
 docs/
   plan.md  cli.md  releasing.md
 ```
@@ -120,7 +120,7 @@ Full reference with flags: [`docs/cli.md`](cli.md).
 | `transcript <ref>` | Captions as txt / vtt / srt / json | InnerTube transcript → yt-dlp subs |
 | `thumbnail <ref>` | Download best available thumbnail | i.ytimg.com |
 | `download <ref>` | Download video or audio | yt-dlp |
-| `update` | Update yt-data and/or yt-dlp | GitHub Releases |
+| `update` | Update tubeline and/or yt-dlp | GitHub Releases |
 | `doctor` | Check yt-dlp, ffmpeg, network, each data source | all |
 | `schema [cmd]` | Print JSON Schema of a command's output | zod models |
 | `docs` | Print full markdown reference (for agents) | built-in |
@@ -177,20 +177,20 @@ line) are accepted where it makes sense.
 
 ## 7. Updater
 
-### `yt-data update`
+### `tubeline update`
 
 ```
-yt-data update            # update both yt-data and managed yt-dlp
-yt-data update --self     # only yt-data
-yt-data update --yt-dlp   # only yt-dlp
-yt-data update --check    # report available updates, change nothing (JSON)
-yt-data update --yt-dlp-channel stable|nightly
+tubeline update            # update both tubeline and managed yt-dlp
+tubeline update --self     # only tubeline
+tubeline update --yt-dlp   # only yt-dlp
+tubeline update --check    # report available updates, change nothing (JSON)
+tubeline update --yt-dlp-channel stable|nightly
 ```
 
 **Self-update**
-1. GET latest release from GitHub Releases API (`akashvaghela09/yt-data`).
+1. GET latest release from GitHub Releases API (`akashvaghela09/tubeline`).
 2. Compare semver with the running version; stop if current.
-3. Download the asset for this platform (`yt-data-<os>-<arch>[.exe]`) and `SHA256SUMS`.
+3. Download the asset for this platform (`tubeline-<os>-<arch>[.exe]`) and `SHA256SUMS`.
 4. Verify checksum; write to a temp file next to the current binary; `chmod +x`;
    atomic `rename()` over `process.execPath`. (Windows: rename running exe to `.old`,
    move new one in, delete `.old` on next start.)
@@ -205,25 +205,25 @@ yt-data update --yt-dlp-channel stable|nightly
   standalone) and print the right upgrade command. If it's a standalone binary in a
   user-writable path, `yt-dlp -U` may be run with `--yes`.
 - First use of `download` with no yt-dlp anywhere → error code 6 with hint
-  `yt-data update --yt-dlp` (no silent downloads, no prompts).
+  `tubeline update --yt-dlp` (no silent downloads, no prompts).
 
 **Update notices**
 - At most once per 24 h, a background check writes a one-line notice to **stderr**, only
   when stderr is a TTY (never pollutes agent pipelines).
-- Disable with `YT_DATA_NO_UPDATE_CHECK=1` or config `updateCheck: false`.
+- Disable with `TUBELINE_NO_UPDATE_CHECK=1` or config `updateCheck: false`.
 
 ## 8. Paths, config, env
 
 | What | Linux | macOS | Windows |
 |---|---|---|---|
-| Config | `~/.config/yt-data/config.json` | `~/Library/Application Support/yt-data/` | `%APPDATA%\yt-data\` |
-| Cache | `~/.cache/yt-data/` | `~/Library/Caches/yt-data/` | `%LOCALAPPDATA%\yt-data\cache\` |
-| Data (managed yt-dlp) | `~/.local/share/yt-data/bin/` | `~/Library/Application Support/yt-data/bin/` | `%LOCALAPPDATA%\yt-data\bin\` |
+| Config | `~/.config/tubeline/config.json` | `~/Library/Application Support/tubeline/` | `%APPDATA%\tubeline\` |
+| Cache | `~/.cache/tubeline/` | `~/Library/Caches/tubeline/` | `%LOCALAPPDATA%\tubeline\cache\` |
+| Data (managed yt-dlp) | `~/.local/share/tubeline/bin/` | `~/Library/Application Support/tubeline/bin/` | `%LOCALAPPDATA%\tubeline\bin\` |
 
 XDG variables are respected on Linux. Env vars:
-`YT_DATA_CONFIG`, `YT_DATA_CACHE_DIR`, `YT_DATA_NO_CACHE`, `YT_DATA_NO_UPDATE_CHECK`,
-`YT_DATA_YTDLP` (explicit yt-dlp path), `YT_DATA_COOKIES`, `YT_DATA_PROXY`,
-`YT_DATA_LOG` (`error|warn|info|debug`).
+`TUBELINE_CONFIG`, `TUBELINE_CACHE_DIR`, `TUBELINE_NO_CACHE`, `TUBELINE_NO_UPDATE_CHECK`,
+`TUBELINE_YTDLP` (explicit yt-dlp path), `TUBELINE_COOKIES`, `TUBELINE_PROXY`,
+`TUBELINE_LOG` (`error|warn|info|debug`).
 
 Precedence: flag > env > config file > default.
 
@@ -244,14 +244,14 @@ Precedence: flag > env > config file > default.
 ## 10. Agent discoverability
 
 - Exhaustive `--help` on every command, with examples.
-- `man yt-data`: release ships `yt-data.1` (installed by `install.sh`); `yt-data docs --man`
+- `man tubeline`: release ships `tubeline.1` (installed by `install.sh`); `tubeline docs --man`
   prints roff generated from the commander definitions (so it can't drift), and
-  `yt-data docs --install-man` writes it to `~/.local/share/man/man1/`.
-- `yt-data docs` prints `docs/cli.md`, embedded in the binary at build time.
-- `yt-data docs` prints the full markdown reference (same content as `docs/cli.md`).
-- `yt-data schema <command>` prints JSON Schema for that command's output.
-- Later: `yt-data mcp` — MCP server over stdio exposing the same commands as tools.
-- Later: ship an agent skill file (`SKILL.md`) that points agents at `yt-data docs`.
+  `tubeline docs --install-man` writes it to `~/.local/share/man/man1/`.
+- `tubeline docs` prints `docs/cli.md`, embedded in the binary at build time.
+- `tubeline docs` prints the full markdown reference (same content as `docs/cli.md`).
+- `tubeline schema <command>` prints JSON Schema for that command's output.
+- Later: `tubeline mcp` — MCP server over stdio exposing the same commands as tools.
+- Later: ship an agent skill file (`SKILL.md`) that points agents at `tubeline docs`.
 
 ## 11. Testing
 
@@ -262,14 +262,14 @@ Precedence: flag > env > config file > default.
   volatile session fields. Re-record with `bun run scripts/record-fixtures.ts [scenario]`;
   scenarios live in `tests/helpers/scenarios.ts` and are shared with the live tests.
 - Output-contract tests: every command's JSON validates against its zod schema.
-- Live tests behind `YT_DATA_LIVE=1`, run nightly in CI to catch YouTube changes early.
+- Live tests behind `TUBELINE_LIVE=1`, run nightly in CI to catch YouTube changes early.
 - Smoke test the compiled binary in CI on each OS.
 
 ## 12. Release
 
 - GitHub Actions: lint → typecheck → test → `bun build --compile` matrix:
   `linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`, `windows-x64`.
-- Upload binaries + `SHA256SUMS` + `yt-data.1` to the GitHub Release on tag `v*`.
+- Upload binaries + `SHA256SUMS` + `tubeline.1` to the GitHub Release on tag `v*`.
 - `install.sh` one-liner that downloads the right binary to `~/.local/bin`.
 - Changelog in `CHANGELOG.md` (Keep a Changelog format).
 
@@ -285,7 +285,7 @@ Precedence: flag > env > config file > default.
 | 5 | `update` (self + yt-dlp), update notices | ✅ |
 | 6 | Docs: man page, `docs`, `schema`, README polish | ✅ |
 | 7 | CI + release pipeline, `install.sh` | ✅ v0.1.0 (install.sh + self-update verified on Linux) |
-| 8 (v0.2) | Human output by default at a terminal, `--json`; `search`; interactive menus (`yt-data ui`) | ✅ |
+| 8 (v0.2) | Human output by default at a terminal, `--json`; `search`; interactive menus (`tubeline ui`) | ✅ |
 | 9 (v0.3) | Full-screen app on OpenTUI after a UX review; download queue with real progress | ✅ on `dev` |
 | Later | comments, Data API v3 backend, Whisper, MCP server, Playwright fallback | — |
 
@@ -307,7 +307,7 @@ Precedence: flag > env > config file > default.
   `createListWriter`. With `--fields`, human mode falls back to a table.
 - v0.3 replaced the clack menus with a full-screen OpenTUI (React) app; see
   docs/cli.md `ui`. Download progress comes from yt-dlp's structured `--progress-template`
-  (`YTDATA_PROG fmt|status|done|total|estimate|speed|eta`), stream count from
+  (`TUBELINE_PROG fmt|status|done|total|estimate|speed|eta`), stream count from
   `--print before_dl:%(format_id)s`, stages from postprocessor templates.
 - Menus (`src/ui/`) call the same services as the commands (`InnertubeSource`,
   `services/download.ts`, `services/transcript.ts`) — they never shell out to the CLI.
@@ -319,6 +319,6 @@ Precedence: flag > env > config file > default.
 
 ## 16. Resolved questions
 
-- Releases: GitHub `akashvaghela09/yt-data`, default branch `main`.
+- Releases: GitHub `akashvaghela09/tubeline`, default branch `main`.
 - License: MIT.
 - `download` defaults to best available quality; cap with `--quality`.

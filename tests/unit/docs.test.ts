@@ -11,8 +11,8 @@ async function run(...args: string[]) {
     stderr: "pipe",
     env: {
       ...process.env,
-      YT_DATA_CONFIG: "/nonexistent/config.json",
-      YT_DATA_NO_UPDATE_CHECK: "1",
+      TUBELINE_CONFIG: "/nonexistent/config.json",
+      TUBELINE_NO_UPDATE_CHECK: "1",
     },
   });
   const [stdout, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
@@ -63,7 +63,7 @@ describe("docs", () => {
 
   test("man page is generated from command definitions", async () => {
     const r = await run("docs", "--man");
-    expect(r.stdout).toStartWith(".TH YT\\-DATA 1");
+    expect(r.stdout).toStartWith(".TH TUBELINE 1");
     for (const flag of [
       "\\-\\-since",
       "\\-\\-audio\\-format",

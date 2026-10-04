@@ -1,5 +1,5 @@
-// Locating and running yt-dlp: YT_DATA_YTDLP, else the managed copy in the data dir
-// (installed by `yt-data update --yt-dlp`), else yt-dlp on PATH.
+// Locating and running yt-dlp: TUBELINE_YTDLP, else the managed copy in the data dir
+// (installed by `tubeline update --yt-dlp`), else yt-dlp on PATH.
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -20,16 +20,16 @@ export function managedYtDlpPath(env: NodeJS.ProcessEnv = process.env): string {
 }
 
 export function findYtDlp(env: NodeJS.ProcessEnv = process.env): YtDlpLocation | null {
-  if (env.YT_DATA_YTDLP) {
-    if (!existsSync(env.YT_DATA_YTDLP)) {
+  if (env.TUBELINE_YTDLP) {
+    if (!existsSync(env.TUBELINE_YTDLP)) {
       throw new CliError(
         "MISSING_DEPENDENCY",
-        `YT_DATA_YTDLP points to a missing file: ${env.YT_DATA_YTDLP}`,
+        `TUBELINE_YTDLP points to a missing file: ${env.TUBELINE_YTDLP}`,
       );
     }
-    return { path: env.YT_DATA_YTDLP, kind: "env" };
+    return { path: env.TUBELINE_YTDLP, kind: "env" };
   }
-  // A managed copy only exists if the user asked for it (`yt-data update --yt-dlp`), so it
+  // A managed copy only exists if the user asked for it (`tubeline update --yt-dlp`), so it
   // wins over whatever happens to be on PATH.
   const managed = managedYtDlpPath(env);
   if (existsSync(managed)) return { path: managed, kind: "managed" };
@@ -43,7 +43,7 @@ export function requireYtDlp(env: NodeJS.ProcessEnv = process.env): YtDlpLocatio
     throw new CliError(
       "MISSING_DEPENDENCY",
       "yt-dlp was not found",
-      "Install it with `yt-data update --yt-dlp`",
+      "Install it with `tubeline update --yt-dlp`",
     );
   }
   return found;
@@ -119,7 +119,7 @@ export function ytDlpError(stderr: string): CliError {
   return new CliError(
     "INTERNAL",
     `yt-dlp: ${line}`,
-    "Run `yt-data update --yt-dlp` — YouTube changes often break older versions",
+    "Run `tubeline update --yt-dlp` — YouTube changes often break older versions",
   );
 }
 
@@ -134,7 +134,7 @@ export async function fetchSubtitles(
   opts: YtDlpOptions,
 ): Promise<TranscriptSegment[] | null> {
   const ytdlp = requireYtDlp();
-  const dir = mkdtempSync(join(tmpdir(), "yt-data-subs-"));
+  const dir = mkdtempSync(join(tmpdir(), "tubeline-subs-"));
   try {
     const args = [
       ...commonArgs(opts),

@@ -9,7 +9,7 @@ import { installAsset } from "../../src/update/install.ts";
 import { selfAsset } from "../../src/update/self.ts";
 import { systemUpgradeHint, ytDlpAsset } from "../../src/update/ytdlp.ts";
 
-const dir = mkdtempSync(join(tmpdir(), "yt-data-update-"));
+const dir = mkdtempSync(join(tmpdir(), "tubeline-update-"));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 test("compareVersions", () => {
@@ -32,9 +32,9 @@ test("parseChecksums handles text and binary markers", () => {
 });
 
 test("asset names per platform", () => {
-  expect(selfAsset("linux", "x64")).toBe("yt-data-linux-x64");
-  expect(selfAsset("darwin", "arm64")).toBe("yt-data-darwin-arm64");
-  expect(selfAsset("win32", "x64")).toBe("yt-data-windows-x64.exe");
+  expect(selfAsset("linux", "x64")).toBe("tubeline-linux-x64");
+  expect(selfAsset("darwin", "arm64")).toBe("tubeline-darwin-arm64");
+  expect(selfAsset("win32", "x64")).toBe("tubeline-windows-x64.exe");
   expect(() => selfAsset("freebsd", "x64")).toThrow(CliError);
   expect(ytDlpAsset("linux", "x64")).toBe("yt-dlp_linux");
   expect(ytDlpAsset("linux", "arm64")).toBe("yt-dlp_linux_aarch64");

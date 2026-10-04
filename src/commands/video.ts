@@ -21,11 +21,11 @@ export function registerVideo(program: Command, getCtx: () => AppContext) {
       "after",
       `
 Examples:
-  yt-data video dQw4w9WgXcQ
-  yt-data video https://youtu.be/dQw4w9WgXcQ --fields title,viewCount,publishedAt,channel.name
-  cat ids.txt | yt-data video - --format ndjson
+  tubeline video dQw4w9WgXcQ
+  tubeline video https://youtu.be/dQw4w9WgXcQ --fields title,viewCount,publishedAt,channel.name
+  cat ids.txt | tubeline video - --format ndjson
 
-Output schema: yt-data schema video`,
+Output schema: tubeline schema video`,
     )
     .action(async (refs: string[], opts: { fields?: string }) => {
       const ctx = getCtx();
@@ -35,7 +35,7 @@ Output schema: yt-data schema video`,
           throw new CliError(
             "USAGE",
             `"${ref}" is a ${refKindLabel(parsed)}, not a video`,
-            "Use `yt-data channel` for channels",
+            "Use `tubeline channel` for channels",
           );
         }
         return (await ctx.innertube()).getVideo(parsed.id);

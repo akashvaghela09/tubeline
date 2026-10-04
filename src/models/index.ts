@@ -1,4 +1,4 @@
-// Registry behind `yt-data schema`: which model each command prints.
+// Registry behind `tubeline schema`: which model each command prints.
 import { z } from "zod";
 import { Channel } from "./channel.ts";
 import {

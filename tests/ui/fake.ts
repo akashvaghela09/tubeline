@@ -145,7 +145,7 @@ export function fakeServices(
       } satisfies DownloadResult;
     },
     existing: () => null,
-    update: async () => "✓ yt-data: 9.9.9 is already the latest\n",
+    update: async () => "✓ tubeline: 9.9.9 is already the latest\n",
     doctor: async () => "All required checks passed.\n",
     ytDlpAge: async () => 10,
   };

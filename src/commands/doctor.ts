@@ -97,8 +97,8 @@ export async function runChecks(ctx: AppContext, online: boolean): Promise<Check
           detail: `${version} is ${age} days old (${found.kind}: ${found.path}); YouTube changes break old versions`,
           hint:
             found.kind === "managed"
-              ? "Run `yt-data update --yt-dlp`"
-              : "Upgrade it with your package manager, or remove it to use the managed copy (`yt-data update --yt-dlp`)",
+              ? "Run `tubeline update --yt-dlp`"
+              : "Upgrade it with your package manager, or remove it to use the managed copy (`tubeline update --yt-dlp`)",
           code: "MISSING_DEPENDENCY",
         });
       } else
@@ -110,7 +110,7 @@ export async function runChecks(ctx: AppContext, online: boolean): Promise<Check
             res.code === 0
               ? `${res.stdout.trim()} (${found.kind}: ${found.path})`
               : `fails to run: ${res.stderr.trim()}`,
-          hint: res.code === 0 ? null : "Reinstall with `yt-data update --yt-dlp`",
+          hint: res.code === 0 ? null : "Reinstall with `tubeline update --yt-dlp`",
           code: "MISSING_DEPENDENCY",
         });
     } else {
@@ -119,7 +119,7 @@ export async function runChecks(ctx: AppContext, online: boolean): Promise<Check
         ok: false,
         required: false,
         detail: "not found (needed for download and the transcript fallback)",
-        hint: "Install with `yt-data update --yt-dlp`",
+        hint: "Install with `tubeline update --yt-dlp`",
         code: "MISSING_DEPENDENCY",
       });
     }
@@ -241,7 +241,7 @@ async function tuiCheck(): Promise<Check> {
       ok: false,
       required: false,
       detail: `native renderer failed to load: ${(err as Error).message}`,
-      hint: "Commands still work; only `yt-data ui` is affected. Please report your platform.",
+      hint: "Commands still work; only `tubeline ui` is affected. Please report your platform.",
       code: "INTERNAL",
     };
   }
@@ -258,12 +258,12 @@ function writableDir(name: string, dir: string): Check {
       ok: false,
       required: false,
       detail: `${dir}: ${(err as Error).message}`,
-      hint: "Set YT_DATA_CACHE_DIR to a writable directory, or use --no-cache",
+      hint: "Set TUBELINE_CACHE_DIR to a writable directory, or use --no-cache",
       code: "INTERNAL",
     };
   }
 }
 
 function configPath(): string {
-  return process.env.YT_DATA_CONFIG || join(appPaths().config, "config.json");
+  return process.env.TUBELINE_CONFIG || join(appPaths().config, "config.json");
 }

@@ -4,7 +4,7 @@ export const KEY_REFERENCE = `Everywhere
   Ctrl+C            go to Home; on Home, quit
   ?                 this list
   Ctrl+O            downloads list          Ctrl+S   settings
-  Ctrl+K            check setup             Ctrl+U   update yt-data and yt-dlp
+  Ctrl+K            check setup             Ctrl+U   update tubeline and yt-dlp
 
 Home
   type / paste      a link, @handle or id opens it; anything else searches

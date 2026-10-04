@@ -18,7 +18,7 @@ export function registerDocs(program: Command) {
       if (opts.installMan) {
         const dir = join(process.platform === "win32" ? appPaths().data : manBase(), "man1");
         mkdirSync(dir, { recursive: true });
-        const path = join(dir, "yt-data.1");
+        const path = join(dir, "tubeline.1");
         writeFileSync(path, manPage(program));
         process.stdout.write(`${JSON.stringify({ path })}\n`);
         return;
@@ -63,11 +63,11 @@ function optionLines(options: readonly Option[]): string[] {
 export function manPage(program: Command): string {
   const date = new Date().toISOString().slice(0, 10);
   const lines: string[] = [
-    `.TH YT\\-DATA 1 "${date}" "yt-data ${pkg.version}" "User Commands"`,
+    `.TH TUBELINE 1 "${date}" "tubeline ${pkg.version}" "User Commands"`,
     ".SH NAME",
-    "yt\\-data \\- fetch YouTube channel, video, transcript and media data",
+    "tubeline \\- fetch YouTube channel, video, transcript and media data",
     ".SH SYNOPSIS",
-    ".B yt\\-data",
+    ".B tubeline",
     ".I command",
     "[\\fIoptions\\fR] [\\fIrefs\\fR...]",
     ".SH DESCRIPTION",
@@ -78,7 +78,7 @@ export function manPage(program: Command): string {
     ),
     ".PP",
     esc(
-      "Output is JSON by default (pretty on a terminal, compact otherwise). One ref prints an object; several print an array. --format ndjson prints one object per line. Run `yt-data docs` for the full reference with field lists and examples, and `yt-data schema <name>` for JSON Schemas.",
+      "Output is JSON by default (pretty on a terminal, compact otherwise). One ref prints an object; several print an array. --format ndjson prints one object per line. Run `tubeline docs` for the full reference with field lists and examples, and `tubeline schema <name>` for JSON Schemas.",
     ),
     ".SH GLOBAL OPTIONS",
     ...optionLines(program.options),
@@ -111,36 +111,36 @@ export function manPage(program: Command): string {
     esc('Every failure also writes one JSON line to stderr: {"error":{"code","message","hint"}}.'),
     ".SH ENVIRONMENT",
     ...[
-      ["YT_DATA_CONFIG", "Config file path."],
-      ["YT_DATA_CACHE_DIR", "Cache directory."],
-      ["YT_DATA_NO_CACHE", "1 disables caching."],
-      ["YT_DATA_NO_UPDATE_CHECK", "1 disables the daily update notice."],
-      ["YT_DATA_YTDLP", "yt-dlp executable to use."],
-      ["YT_DATA_COOKIES", "Netscape cookies.txt file."],
-      ["YT_DATA_COOKIES_FROM_BROWSER", "Browser to read cookies from (yt-dlp)."],
-      ["YT_DATA_PROXY", "HTTP or SOCKS proxy URL."],
-      ["YT_DATA_LOG", "silent, error, warn, info or debug."],
+      ["TUBELINE_CONFIG", "Config file path."],
+      ["TUBELINE_CACHE_DIR", "Cache directory."],
+      ["TUBELINE_NO_CACHE", "1 disables caching."],
+      ["TUBELINE_NO_UPDATE_CHECK", "1 disables the daily update notice."],
+      ["TUBELINE_YTDLP", "yt-dlp executable to use."],
+      ["TUBELINE_COOKIES", "Netscape cookies.txt file."],
+      ["TUBELINE_COOKIES_FROM_BROWSER", "Browser to read cookies from (yt-dlp)."],
+      ["TUBELINE_PROXY", "HTTP or SOCKS proxy URL."],
+      ["TUBELINE_LOG", "silent, error, warn, info or debug."],
     ].flatMap(([name, text]) => [".TP", `.B ${esc(name as string)}`, esc(text as string)]),
     ".SH FILES",
     ".TP",
-    ".I ~/.config/yt\\-data/config.json",
+    ".I ~/.config/tubeline/config.json",
     "Configuration (flags override environment, which overrides this file).",
     ".TP",
-    ".I ~/.cache/yt\\-data/",
+    ".I ~/.cache/tubeline/",
     "Cached sessions and results.",
     ".TP",
-    ".I ~/.local/share/yt\\-data/bin/yt\\-dlp",
-    "Managed yt\\-dlp installed by \\fByt\\-data update \\-\\-yt\\-dlp\\fR.",
+    ".I ~/.local/share/tubeline/bin/yt\\-dlp",
+    "Managed yt\\-dlp installed by \\fBtubeline update \\-\\-yt\\-dlp\\fR.",
     ".SH EXAMPLES",
     ".nf",
     ...[
-      "yt-data channel @mkbhd --fields name,subscriberCount",
-      "yt-data videos @mkbhd --limit 20 --format table --fields title,viewCount,publishedText",
-      "yt-data video dQw4w9WgXcQ",
-      "yt-data transcript dQw4w9WgXcQ --as txt",
-      "yt-data thumbnail dQw4w9WgXcQ -o ./thumbs",
-      "yt-data download dQw4w9WgXcQ --quality 1080p -o ./downloads",
-      "yt-data update",
+      "tubeline channel @mkbhd --fields name,subscriberCount",
+      "tubeline videos @mkbhd --limit 20 --format table --fields title,viewCount,publishedText",
+      "tubeline video dQw4w9WgXcQ",
+      "tubeline transcript dQw4w9WgXcQ --as txt",
+      "tubeline thumbnail dQw4w9WgXcQ -o ./thumbs",
+      "tubeline download dQw4w9WgXcQ --quality 1080p -o ./downloads",
+      "tubeline update",
     ].map(esc),
     ".fi",
     ".SH SEE ALSO",

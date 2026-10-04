@@ -1,4 +1,4 @@
-// Self-update of the compiled yt-data binary from this project's GitHub releases.
+// Self-update of the compiled tubeline binary from this project's GitHub releases.
 import { accessSync, constants } from "node:fs";
 import { dirname } from "node:path";
 import pkg from "../../package.json";
@@ -7,16 +7,16 @@ import type { FetchFn } from "../core/http.ts";
 import { compareVersions, latestRelease } from "./github.ts";
 import { installAsset } from "./install.ts";
 
-export const REPO = "akashvaghela09/yt-data";
+export const REPO = "akashvaghela09/tubeline";
 
 export function selfAsset(platform = process.platform, arch = process.arch): string {
   const os = platform === "win32" ? "windows" : platform;
   if (!["linux", "darwin", "windows"].includes(os) || !["x64", "arm64"].includes(arch)) {
-    throw new CliError("USAGE", `No yt-data binary for ${platform}-${arch}`);
+    throw new CliError("USAGE", `No tubeline binary for ${platform}-${arch}`);
   }
   if (os === "windows" && arch !== "x64")
     throw new CliError("USAGE", "Only x64 Windows binaries are published");
-  return `yt-data-${os}-${arch}${os === "windows" ? ".exe" : ""}`;
+  return `tubeline-${os}-${arch}${os === "windows" ? ".exe" : ""}`;
 }
 
 /** True when running as a `bun build --compile` binary rather than from source. */

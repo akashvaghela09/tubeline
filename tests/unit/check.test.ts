@@ -6,11 +6,11 @@ import pkg from "../../package.json";
 import { loadConfig } from "../../src/core/config.ts";
 import { shouldCheck, updateNotice } from "../../src/update/check.ts";
 
-const dir = mkdtempSync(join(tmpdir(), "yt-data-check-"));
+const dir = mkdtempSync(join(tmpdir(), "tubeline-check-"));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 const config = (sub: string) =>
-  loadConfig({}, { YT_DATA_CONFIG: join(dir, "none.json"), YT_DATA_CACHE_DIR: join(dir, sub) });
+  loadConfig({}, { TUBELINE_CONFIG: join(dir, "none.json"), TUBELINE_CACHE_DIR: join(dir, sub) });
 
 function releases(tag: string | null) {
   let calls = 0;
@@ -25,7 +25,7 @@ test("notifies about a newer release and checks at most once a day", async () =>
   const c = config("a");
   const gh = releases("v99.0.0");
   const now = Date.now();
-  expect(await updateNotice(c, gh.fn, now)).toContain("yt-data 99.0.0 is available");
+  expect(await updateNotice(c, gh.fn, now)).toContain("tubeline 99.0.0 is available");
   expect(await updateNotice(c, gh.fn, now + 3600_000)).toContain("99.0.0");
   expect(gh.calls()).toBe(1);
   await updateNotice(c, gh.fn, now + 25 * 3600_000);

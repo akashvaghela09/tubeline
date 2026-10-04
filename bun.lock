@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "yt-data",
+      "name": "tubeline",
       "dependencies": {
         "@opentui/core": "^0.5.14",
         "@opentui/react": "^0.5.14",

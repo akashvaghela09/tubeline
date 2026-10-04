@@ -9,7 +9,7 @@
    `package.json`, cross-compiles all targets (`bun run build:all`) and publishes a GitHub
    Release with the binaries and `SHA256SUMS`.
 
-Asset names (`yt-data-<os>-<arch>[.exe]`) and `SHA256SUMS` are what `install.sh` and
-`yt-data update` depend on. Don't rename them without updating both.
+Asset names (`tubeline-<os>-<arch>[.exe]`) and `SHA256SUMS` are what `install.sh` and
+`tubeline update` depend on. Don't rename them without updating both.
 
 Build locally without publishing: `bun run build:all` → `dist/`.

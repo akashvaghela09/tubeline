@@ -9,7 +9,7 @@ async function run(...args: string[]) {
   const proc = Bun.spawn(["bun", "run", CLI, ...args], {
     stdout: "pipe",
     stderr: "pipe",
-    env: { ...process.env, YT_DATA_CONFIG: "/nonexistent/config.json" },
+    env: { ...process.env, TUBELINE_CONFIG: "/nonexistent/config.json" },
   });
   const [stdout, stderr, code] = await Promise.all([
     new Response(proc.stdout).text(),

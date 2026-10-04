@@ -6,10 +6,30 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-04
+
+### Changed
+- **Renamed to `tubeline`** (repository `akashvaghela09/tubeline`). The command is now
+  `tubeline`; environment variables are `TUBELINE_*` (e.g. `TUBELINE_CONFIG`,
+  `TUBELINE_YTDLP`, `TUBELINE_THEME`); config, cache and data live in `~/.config/tubeline`,
+  `~/.cache/tubeline` and `~/.local/share/tubeline`; release assets are `tubeline-<os>-<arch>`
+  and the man page is `tubeline(1)`. Earlier binaries can't self-update across the rename —
+  reinstall with `install.sh`.
+- Downloads in the interactive app: one status line above the footer (a single download
+  shows its name and progress; several show overall progress), a solid smooth progress
+  bar, fixed columns and fixed-width stage words; `Ctrl+O` shows a table of all downloads
+  with a detail card for the selected one (stage strip, large bar, size/speed/time, what
+  and where, full error with hint).
+
+### Fixed
+- Thumbnails: YouTube answers some missing sizes with a 120px grey placeholder instead of
+  a 404; those are now skipped so the best real size is saved (maxres → sd → hq → mq →
+  default). Thumbnails saved from the app are named `Title [id].jpg`.
+
 ## [0.3.0] - 2026-10-03
 
 ### Changed
-- **New interactive app** (`yt-data` / `yt-data ui`), rebuilt as a full-screen UI on
+- **New interactive app** (`tubeline` / `tubeline ui`), rebuilt as a full-screen UI on
   OpenTUI, following a UX review of 0.2.0:
   - Home is one input for links, @handles, ids and searches, with recent items.
   - Video screen shows captions, best quality with estimated size and whether it's already
@@ -33,7 +53,7 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
   "make these my defaults" is explicit), replacing `D`/`A`.
 - Themes: Auto (matches the terminal's light/dark background), Night, Day, Gruvbox,
   Solarized Light, High contrast, plus Catppuccin Mocha, Nord, Dracula, GitHub Light;
-  live preview in Settings; `--theme` / `YT_DATA_THEME`.
+  live preview in Settings; `--theme` / `TUBELINE_THEME`.
 - Footer hints never cut mid-word and end with `? keys` (full key reference). Header shows
   where you are and `↓ N running`. Lists keep fixed columns, 3-significant-digit counts,
   a full-width cursor and a separate channel column in search.
@@ -48,12 +68,12 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 ## [0.2.0] - 2026-10-03
 
 ### Added
-- Interactive menus: `yt-data ui`, or plain `yt-data` at a terminal. Open a link or search,
+- Interactive menus: `tubeline ui`, or plain `tubeline` at a terminal. Open a link or search,
   then download video/audio with a progress bar, view or save transcripts, download
   thumbnails, browse channels and playlists (type to filter, load more), bulk actions on
   several videos, update and doctor. Remembers download folder, quality and formats;
   downloads default to the Downloads folder.
-- `yt-data search <query>`: videos, shorts, channels or playlists with sort, duration,
+- `tubeline search <query>`: videos, shorts, channels or playlists with sort, duration,
   upload-date and feature filters, following result pages.
 - `--json` global flag.
 - Readable `human` output format with colors (respects `NO_COLOR`).
@@ -76,40 +96,41 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
 ## [0.1.0] - 2026-10-03
 
 ### Added
-- `yt-data schema [name]`: JSON Schemas (draft 2020-12) for every output shape.
-- `yt-data docs`: embedded markdown reference; `--man` / `--install-man` man page generated
-  from the command definitions; releases ship `yt-data.1` and `install.sh` installs it.
-- `yt-data download <refs...>`: video/audio downloads via yt-dlp with quality caps,
+- `tubeline schema [name]`: JSON Schemas (draft 2020-12) for every output shape.
+- `tubeline docs`: embedded markdown reference; `--man` / `--install-man` man page generated
+  from the command definitions; releases ship `tubeline.1` and `install.sh` installs it.
+- `tubeline download <refs...>`: video/audio downloads via yt-dlp with quality caps,
   mp3/opus/m4a audio, subtitles, thumbnails, custom templates and pass-through args;
   JSON record per file, progress on stderr only at a terminal.
-- `yt-data update`: verified, atomic self-update from GitHub Releases and managed yt-dlp
+- `tubeline update`: verified, atomic self-update from GitHub Releases and managed yt-dlp
   install/update (stable or nightly), `--check`; daily update notice on interactive stderr.
-- `yt-data doctor`: dependency, cache and per-source health checks, stale yt-dlp warning.
+- `tubeline doctor`: dependency, cache and per-source health checks, stale yt-dlp warning.
 - `--cookies-from-browser` (yt-dlp only).
-- `yt-data transcript <refs...>`: captions as json / txt / vtt / srt, language and
+- `tubeline transcript <refs...>`: captions as json / txt / vtt / srt, language and
   manual/auto selection, `--list`, `--timestamps`, `-o` file or directory, yt-dlp fallback.
-- `yt-data thumbnail <refs...>`: best-available thumbnail download or `--url-only`.
-- `yt-data videos <ref>`: list a channel's videos / shorts / streams / all uploads, or a
+- `tubeline thumbnail <refs...>`: best-available thumbnail download or `--url-only`.
+- `tubeline videos <ref>`: list a channel's videos / shorts / streams / all uploads, or a
   playlist, with pagination, `--limit`, `--sort newest|popular|oldest`, `--since`, `--full`
   (full metadata per video) and NDJSON streaming.
 - Result cache with per-kind TTLs; `--refresh` to bypass reads.
-- `yt-data channel <refs...>`: channel details (handle, counts, join date, country, links,
+- `tubeline channel <refs...>`: channel details (handle, counts, join date, country, links,
   avatar, banner, keywords).
-- `yt-data video <refs...>`: full video metadata (counts, exact publish date, channel,
+- `tubeline video <refs...>`: full video metadata (counts, exact publish date, channel,
   captions list, chapters, thumbnails, playability).
 - Ref parsing for watch / youtu.be / shorts / live / embed URLs, `@handle`, `/c/`, `/user/`,
   `UC…` and video ids; `-` reads refs from stdin.
 - Output formats `json` (default), `ndjson`, `table`, `csv`; `--fields` dot-path projection.
 - Typed JSON errors on stderr with stable exit codes; config file + env vars
-  (`YT_DATA_CONFIG`, `YT_DATA_CACHE_DIR`, `YT_DATA_NO_CACHE`, `YT_DATA_COOKIES`,
-  `YT_DATA_PROXY`, `YT_DATA_LOG`); `--region`, `--cookies`, `--proxy`, `--no-cache`.
+  (`TUBELINE_CONFIG`, `TUBELINE_CACHE_DIR`, `TUBELINE_NO_CACHE`, `TUBELINE_COOKIES`,
+  `TUBELINE_PROXY`, `TUBELINE_LOG`); `--region`, `--cookies`, `--proxy`, `--no-cache`.
 - HTTP retries with backoff for 429/5xx and network errors.
 - Offline contract tests from recorded InnerTube fixtures; opt-in live tests.
 - Project scaffold: README, plan, CLI spec, release guide, MIT license.
 - Tooling: Bun, TypeScript, Biome; CI, nightly live-test and release workflows; `install.sh`.
 
-[Unreleased]: https://github.com/akashvaghela09/yt-data/compare/v0.3.0...HEAD
-[0.3.0]: https://github.com/akashvaghela09/yt-data/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/akashvaghela09/yt-data/compare/v0.1.1...v0.2.0
-[0.1.1]: https://github.com/akashvaghela09/yt-data/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/akashvaghela09/yt-data/releases/tag/v0.1.0
+[Unreleased]: https://github.com/akashvaghela09/tubeline/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/akashvaghela09/tubeline/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/akashvaghela09/tubeline/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/akashvaghela09/tubeline/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/akashvaghela09/tubeline/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/akashvaghela09/tubeline/releases/tag/v0.1.0

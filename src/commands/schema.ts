@@ -15,9 +15,9 @@ export function registerSchema(program: Command) {
       "after",
       `
 Examples:
-  yt-data schema              # list
-  yt-data schema video
-  yt-data schema --all > schemas.json`,
+  tubeline schema              # list
+  tubeline schema video
+  tubeline schema --all > schemas.json`,
     )
     .action((name: string | undefined, opts: { all?: boolean }) => {
       const pretty = process.stdout.isTTY ? 2 : undefined;

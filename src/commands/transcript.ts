@@ -56,11 +56,11 @@ export function registerTranscript(program: Command, getCtx: () => AppContext) {
       "after",
       `
 Examples:
-  yt-data transcript dQw4w9WgXcQ --as txt
-  yt-data transcript dQw4w9WgXcQ --as txt --timestamps
-  yt-data transcript https://youtu.be/dQw4w9WgXcQ --lang de --as srt -o rick.de.srt
-  yt-data transcript dQw4w9WgXcQ --list
-  yt-data videos @mkbhd -n 5 -f ndjson --fields id | jq -r .id | yt-data transcript - --as txt -o ./transcripts
+  tubeline transcript dQw4w9WgXcQ --as txt
+  tubeline transcript dQw4w9WgXcQ --as txt --timestamps
+  tubeline transcript https://youtu.be/dQw4w9WgXcQ --lang de --as srt -o rick.de.srt
+  tubeline transcript dQw4w9WgXcQ --list
+  tubeline videos @mkbhd -n 5 -f ndjson --fields id | jq -r .id | tubeline transcript - --as txt -o ./transcripts
 
 JSON output: {videoId, lang, name, isAuto, isTranslated, source, segments[{start, duration, text}]}.
 With -o, stdout gets one JSON record per file written: {videoId, lang, path}.`,

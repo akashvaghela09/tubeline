@@ -1,4 +1,4 @@
-// Downloading through yt-dlp, shared by `yt-data download` and the interactive UI.
+// Downloading through yt-dlp, shared by `tubeline download` and the interactive UI.
 import { mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { CliError } from "../core/errors.ts";
@@ -28,7 +28,7 @@ export type AudioFormat = (typeof AUDIO_FORMATS)[number];
 export const DEFAULT_TEMPLATE = "%(title)s [%(id)s].%(ext)s";
 
 /** Marks our result line among yt-dlp's stdout (progress shares the stream). */
-const RESULT_TAG = "YTDATA_RESULT ";
+const RESULT_TAG = "TUBELINE_RESULT ";
 
 export interface FormatPlan {
   args: string[];
@@ -120,9 +120,9 @@ export interface Progress {
 }
 
 /** Machine-readable lines we ask yt-dlp to print (it prints nothing else in quiet mode). */
-const FMT_TAG = "YTDATA_FMT ";
-const PROG_TAG = "YTDATA_PROG ";
-const POST_TAG = "YTDATA_POST ";
+const FMT_TAG = "TUBELINE_FMT ";
+const PROG_TAG = "TUBELINE_PROG ";
+const POST_TAG = "TUBELINE_POST ";
 
 export const PROGRESS_ARGS = [
   "--print",

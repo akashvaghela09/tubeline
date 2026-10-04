@@ -45,15 +45,15 @@ export function registerVideos(program: Command, getCtx: () => AppContext) {
       "after",
       `
 Examples:
-  yt-data videos @mkbhd --limit 10 --fields id,title,viewCount,publishedText
-  yt-data videos @mkbhd --type shorts --sort popular -n 20
-  yt-data videos @mkbhd --limit 0 --format ndjson > all.ndjson
-  yt-data videos @mkbhd --since 30d --full --fields id,title,publishedAt,likeCount
-  yt-data videos https://www.youtube.com/playlist?list=PLBsP89CPrMeO7uztAu6YxSB10cRMpjgiY
+  tubeline videos @mkbhd --limit 10 --fields id,title,viewCount,publishedText
+  tubeline videos @mkbhd --type shorts --sort popular -n 20
+  tubeline videos @mkbhd --limit 0 --format ndjson > all.ndjson
+  tubeline videos @mkbhd --since 30d --full --fields id,title,publishedAt,likeCount
+  tubeline videos https://www.youtube.com/playlist?list=PLBsP89CPrMeO7uztAu6YxSB10cRMpjgiY
 
 Without --full, --since uses dates estimated from "2d ago"-style text (accurate to about
 one unit of it). Output is always a JSON array (or NDJSON lines with --format ndjson).
-Output schema: yt-data schema videos (with --full: yt-data schema video)`,
+Output schema: tubeline schema videos (with --full: tubeline schema video)`,
     )
     .action(async (refArg: string, opts: VideosOptions) => {
       const ctx = getCtx();
@@ -86,7 +86,7 @@ Output schema: yt-data schema videos (with --full: yt-data schema video)`,
         throw new CliError(
           "USAGE",
           `"${refArg}" is a video`,
-          "Pass a channel or playlist; use `yt-data video` for one video",
+          "Pass a channel or playlist; use `tubeline video` for one video",
         );
       }
       const source = await ctx.innertube();

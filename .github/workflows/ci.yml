@@ -30,7 +30,7 @@ jobs:
       - name: Smoke test binary
         shell: bash
         run: |
-          ./dist/yt-data --version
+          ./dist/tubeline --version
           # The interactive UI's native renderer must load from inside the compiled binary.
-          ./dist/yt-data doctor --offline --json | grep -q '"name":"interactive ui","ok":true'
+          ./dist/tubeline doctor --offline --json | grep -q '"name":"interactive ui","ok":true'
 

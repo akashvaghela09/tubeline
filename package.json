@@ -1,15 +1,15 @@
 {
-  "name": "yt-data",
-  "version": "0.3.0",
+  "name": "tubeline",
+  "version": "0.4.0",
   "description": "Agent-friendly CLI to fetch YouTube channel/video metadata, transcripts, thumbnails and downloads",
   "private": true,
   "type": "module",
   "bin": {
-    "yt-data": "src/cli.ts"
+    "tubeline": "src/cli.ts"
   },
   "scripts": {
     "dev": "bun run src/cli.ts",
-    "build": "bun build src/cli.ts --compile --minify --outfile dist/yt-data",
+    "build": "bun build src/cli.ts --compile --minify --outfile dist/tubeline",
     "build:all": "bun run scripts/build-all.ts",
     "test": "bun test",
     "typecheck": "tsc --noEmit",

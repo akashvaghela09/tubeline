@@ -1,4 +1,4 @@
-// Output shapes of the non-metadata commands, for `yt-data schema` and contract tests.
+// Output shapes of the non-metadata commands, for `tubeline schema` and contract tests.
 import { z } from "zod";
 import { CaptionTrack } from "./video.ts";
 

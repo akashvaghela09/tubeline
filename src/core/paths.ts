@@ -2,7 +2,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const APP = "yt-data";
+const APP = "tubeline";
 
 export interface AppPaths {
   config: string;

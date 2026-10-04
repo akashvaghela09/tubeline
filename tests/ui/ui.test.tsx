@@ -43,7 +43,7 @@ describe("home", () => {
   test("input, mode label and footer with ? keys", async () => {
     h = await harness();
     const f = h.frame();
-    expect(f).toContain(" yt-data");
+    expect(f).toContain(" tubeline");
     expect(f).toContain("Paste a YouTube link");
     expect(f).toContain("search: videos ⇥");
     expect(f).toContain("? keys");
@@ -287,7 +287,7 @@ describe("app", () => {
     const f = h.frame();
     expect(f).toContain("Appearance");
     expect(f).toContain("Maintenance");
-    expect(f).toContain("yt-data 9.9.9");
+    expect(f).toContain("tubeline 9.9.9");
     for (let i = 0; i < 3; i++) await h.key("ARROW_DOWN"); // theme, folder, quality, audio
     expect(h.frame()).toContain("mp3 plays everywhere");
     await h.enter();

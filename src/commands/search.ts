@@ -48,14 +48,14 @@ export function registerSearch(program: Command, getCtx: () => AppContext) {
       "after",
       `
 Examples:
-  yt-data search mkbhd iphone review
-  yt-data search "lofi hip hop" --type playlist -n 5
-  yt-data search mkbhd --type channel --fields id,name,subscriberCount
-  yt-data search "rust tutorial" --duration long --uploaded year --sort popularity
-  yt-data search "cat videos" --type shorts --json | jq -r '.[].id'
+  tubeline search mkbhd iphone review
+  tubeline search "lofi hip hop" --type playlist -n 5
+  tubeline search mkbhd --type channel --fields id,name,subscriberCount
+  tubeline search "rust tutorial" --duration long --uploaded year --sort popularity
+  tubeline search "cat videos" --type shorts --json | jq -r '.[].id'
 
 Each result has a "type" (video, channel, playlist) deciding its fields:
-  yt-data schema search`,
+  tubeline schema search`,
     )
     .action(async (words: string[], opts: SearchCliOptions) => {
       const ctx = getCtx();

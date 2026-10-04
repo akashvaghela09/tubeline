@@ -11,7 +11,7 @@ export function setLogLevel(level: LogLevel) {
 }
 
 function write(level: Exclude<LogLevel, "silent">, msg: string) {
-  if (ORDER[level] <= ORDER[current]) process.stderr.write(`yt-data: ${level}: ${msg}\n`);
+  if (ORDER[level] <= ORDER[current]) process.stderr.write(`tubeline: ${level}: ${msg}\n`);
 }
 
 export const log = {

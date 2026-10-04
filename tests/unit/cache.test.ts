@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ResponseCache, TTL } from "../../src/core/cache.ts";
 
-const dir = mkdtempSync(join(tmpdir(), "yt-data-cache-"));
+const dir = mkdtempSync(join(tmpdir(), "tubeline-cache-"));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 test("normal mode reads back within TTL, misses after it", () => {

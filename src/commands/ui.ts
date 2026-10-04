@@ -5,7 +5,7 @@ import { CliError } from "../core/errors.ts";
 export function registerUi(program: Command, getCtx: () => AppContext) {
   program
     .command("ui")
-    .summary("interactive menus (also: plain `yt-data` at a terminal)")
+    .summary("interactive menus (also: plain `tubeline` at a terminal)")
     .description(
       "Interactive menus for people: paste a link or search, then download videos or audio, save transcripts or thumbnails, browse channels and playlists, update or check setup. Needs a terminal; for scripts and agents use the regular commands.",
     )
@@ -14,12 +14,12 @@ export function registerUi(program: Command, getCtx: () => AppContext) {
       "colour theme for this run (auto, night, day, gruvbox, solarized-light, high-contrast, …)",
     )
     .action(async (opts: { theme?: string }) => {
-      if (opts.theme) process.env.YT_DATA_THEME = opts.theme;
+      if (opts.theme) process.env.TUBELINE_THEME = opts.theme;
       if (!process.stdin.isTTY || !process.stdout.isTTY) {
         throw new CliError(
           "USAGE",
-          "`yt-data ui` needs an interactive terminal",
-          "Use the regular commands (see `yt-data --help`)",
+          "`tubeline ui` needs an interactive terminal",
+          "Use the regular commands (see `tubeline --help`)",
         );
       }
       // Some pseudo-terminals report 0 columns, which makes every prompt wrap per character.

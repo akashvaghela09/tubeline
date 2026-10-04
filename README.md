@@ -1,4 +1,4 @@
-# yt-data
+# tubeline
 
 A fast YouTube CLI for people **and** AI agents: channel details, video lists, search,
 video metadata, transcripts, thumbnails and video/audio downloads.
@@ -6,7 +6,7 @@ video metadata, transcripts, thumbnails and video/audio downloads.
 - **No browser.** Metadata comes from YouTube's InnerTube JSON API over plain HTTP.
 - **Downloads via [yt-dlp](https://github.com/yt-dlp/yt-dlp)**, auto-managed if you
   don't have it installed.
-- **Interactive menus for people:** run `yt-data`, paste a link or search, pick what to do.
+- **Interactive menus for people:** run `tubeline`, paste a link or search, pick what to do.
   Readable output by default at a terminal.
 - **Built for scripts and AI agents:** `--json` (the default when piped), logs on stderr,
   stable exit codes, `--fields` projection, NDJSON streaming, JSON Schemas, man page.
@@ -18,29 +18,29 @@ video metadata, transcripts, thumbnails and video/audio downloads.
 
 ```sh
 # Prebuilt binary (once releases exist)
-curl -fsSL https://raw.githubusercontent.com/akashvaghela09/yt-data/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/akashvaghela09/tubeline/main/install.sh | sh
 
 # From source
-git clone https://github.com/akashvaghela09/yt-data && cd yt-data
+git clone https://github.com/akashvaghela09/tubeline && cd tubeline
 bun install
-bun run build          # → dist/yt-data
+bun run build          # → dist/tubeline
 ```
 
 The installer also puts a man page in `~/.local/share/man/man1` (or run
-`yt-data docs --install-man`).
+`tubeline docs --install-man`).
 
 Optional dependencies, only for `download` and the transcript fallback:
-- **yt-dlp** — `yt-data update --yt-dlp` installs a managed copy (or use your own).
+- **yt-dlp** — `tubeline update --yt-dlp` installs a managed copy (or use your own).
 - **ffmpeg** — for downloads above 360p and audio conversion.
 
-Keep everything current with `yt-data update`.
+Keep everything current with `tubeline update`.
 
 ## Usage
 
 ### Interactive
 
 ```sh
-yt-data          # full-screen app: paste a link or search, then download, transcribe, browse
+tubeline          # full-screen app: paste a link or search, then download, transcribe, browse
 ```
 
 Paste a link, `@handle` or id — or type to search — then use single keys: `d` download
@@ -53,42 +53,42 @@ with a live progress panel (size, speed, ETA). Pick a colour theme in Settings (
 ### Commands
 
 ```sh
-yt-data channel @mkbhd
-yt-data videos @mkbhd --limit 20 --fields id,title,viewCount,publishedText
-yt-data search mkbhd iphone review
-yt-data search mkbhd --type channel
-yt-data video dQw4w9WgXcQ
-yt-data transcript dQw4w9WgXcQ --as txt
-yt-data thumbnail dQw4w9WgXcQ -o ./thumbs
-yt-data download dQw4w9WgXcQ --quality 1080p -o ./downloads
-yt-data download dQw4w9WgXcQ --quality audio --audio-format mp3
+tubeline channel @mkbhd
+tubeline videos @mkbhd --limit 20 --fields id,title,viewCount,publishedText
+tubeline search mkbhd iphone review
+tubeline search mkbhd --type channel
+tubeline video dQw4w9WgXcQ
+tubeline transcript dQw4w9WgXcQ --as txt
+tubeline thumbnail dQw4w9WgXcQ -o ./thumbs
+tubeline download dQw4w9WgXcQ --quality 1080p -o ./downloads
+tubeline download dQw4w9WgXcQ --quality audio --audio-format mp3
 
-yt-data update            # update yt-data and managed yt-dlp
-yt-data doctor            # check dependencies and data sources
-yt-data schema video      # JSON Schema of `video` output
-yt-data docs              # full reference, for humans and agents
+tubeline update            # update tubeline and managed yt-dlp
+tubeline doctor            # check dependencies and data sources
+tubeline schema video      # JSON Schema of `video` output
+tubeline docs              # full reference, for humans and agents
 ```
 
 Pipe-friendly:
 
 ```sh
-yt-data videos @mkbhd -n 20 --format ndjson --fields id | jq -r .id | yt-data transcript - --as txt -o ./transcripts
+tubeline videos @mkbhd -n 20 --format ndjson --fields id | jq -r .id | tubeline transcript - --as txt -o ./transcripts
 ```
 
 Full reference: [`docs/cli.md`](docs/cli.md).
 
 ## For AI agents
 
-- `yt-data docs` prints the complete reference (markdown); `yt-data <command> --help` and
-  `man yt-data` cover the same options.
-- `yt-data schema <name>` prints the JSON Schema of an output (`schema` alone lists them).
+- `tubeline docs` prints the complete reference (markdown); `tubeline <command> --help` and
+  `man tubeline` cover the same options.
+- `tubeline schema <name>` prints the JSON Schema of an output (`schema` alone lists them).
 - Pass `--json` (JSON is also the default whenever stdout isn't a terminal); `--fields a,b.c`
-  keeps responses small; `--format ndjson` streams lists. Don't use `yt-data ui` — it's
+  keeps responses small; `--format ndjson` streams lists. Don't use `tubeline ui` — it's
   for people.
 - The CLI never prompts. Failures exit non-zero with one JSON line on stderr:
   `{"error":{"code","message","hint"}}` — see the
   [exit codes](docs/cli.md#output-and-errors).
-- `yt-data doctor` tells you what's missing or broken.
+- `tubeline doctor` tells you what's missing or broken.
 
 ## Development
 
@@ -98,7 +98,7 @@ Requires [Bun](https://bun.sh) ≥ 1.4.
 bun install
 bun run dev -- channel @mkbhd    # run from source
 bun test                         # unit tests
-YT_DATA_LIVE=1 bun test          # include live tests against YouTube
+TUBELINE_LIVE=1 bun test          # include live tests against YouTube
 bun run typecheck
 bun run lint
 bun run build                    # compile binary for this platform

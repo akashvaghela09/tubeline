@@ -19,7 +19,7 @@ import { CliError, formatError, setHumanErrors, toCliError } from "./core/errors
 import { shouldCheck, updateNotice } from "./update/check.ts";
 import { cleanupOld } from "./update/install.ts";
 
-const program = new Command("yt-data")
+const program = new Command("tubeline")
   .description(
     "Fetch YouTube channel and video data as JSON. Data goes to stdout, logs and errors to stderr; never prompts.",
   )
@@ -48,7 +48,7 @@ const program = new Command("yt-data")
 Errors: non-zero exit and one JSON line on stderr: {"error":{"code","message","hint"}}
 Exit codes: 0 ok, 1 internal, 2 usage, 3 not found, 4 rate limited, 5 unavailable,
             6 missing dependency, 7 network
-Config: ~/.config/yt-data/config.json (or $YT_DATA_CONFIG). Flags > env > config > defaults.`,
+Config: ~/.config/tubeline/config.json (or $TUBELINE_CONFIG). Flags > env > config > defaults.`,
   )
   .showSuggestionAfterError()
   .exitOverride()
@@ -73,7 +73,7 @@ registerSchema(program);
 registerUi(program, getCtx);
 registerDocs(program);
 
-// `yt-data videos … | head` closes stdout early; that's a normal way to stop, not an error.
+// `tubeline videos … | head` closes stdout early; that's a normal way to stop, not an error.
 process.stdout.on("error", (err: NodeJS.ErrnoException) => {
   if (err.code === "EPIPE") process.exit(0);
   throw err;
@@ -87,7 +87,7 @@ setHumanErrors(
     !process.argv.some((a) => a === "--json" || a.startsWith("--format") || a === "-f"),
 );
 
-// Plain `yt-data` at a terminal opens the menus; anywhere else it prints help as before.
+// Plain `tubeline` at a terminal opens the menus; anywhere else it prints help as before.
 const bare = process.argv.length <= 2;
 const interactive = !!process.stdin.isTTY && !!process.stdout.isTTY;
 
@@ -98,7 +98,7 @@ try {
   if (err instanceof CommanderError) {
     // --help / --version exit through here with code 0.
     if (err.exitCode === 0) process.exit(0);
-    fail(new CliError("USAGE", err.message.replace(/^error:\s*/, ""), "Run `yt-data --help`"));
+    fail(new CliError("USAGE", err.message.replace(/^error:\s*/, ""), "Run `tubeline --help`"));
   }
   fail(toCliError(err));
 }

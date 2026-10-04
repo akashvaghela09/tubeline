@@ -56,14 +56,14 @@ test("ProgressTracker: one monotonic bar across video, audio and merge", () => {
   const seen: number[] = [];
   const stages: string[] = [];
   for (const line of [
-    "YTDATA_FMT 395+251",
-    "YTDATA_PROG 395|downloading|1024|200000|NA|NA|NA",
-    "YTDATA_PROG 395|downloading|100000|200000|NA|5000000|3",
-    "YTDATA_PROG 395|finished|200000|200000|NA|3000000|NA",
-    "YTDATA_PROG 251|downloading|1024|50000|NA|NA|NA",
-    "YTDATA_PROG 251|finished|50000|50000|NA|2000000|NA",
-    "YTDATA_POST Merger|started",
-    "YTDATA_POST Merger|finished",
+    "TUBELINE_FMT 395+251",
+    "TUBELINE_PROG 395|downloading|1024|200000|NA|NA|NA",
+    "TUBELINE_PROG 395|downloading|100000|200000|NA|5000000|3",
+    "TUBELINE_PROG 395|finished|200000|200000|NA|3000000|NA",
+    "TUBELINE_PROG 251|downloading|1024|50000|NA|NA|NA",
+    "TUBELINE_PROG 251|finished|50000|50000|NA|2000000|NA",
+    "TUBELINE_POST Merger|started",
+    "TUBELINE_POST Merger|finished",
   ]) {
     const p = t.update(line);
     seen.push(Math.round(p.percent));
@@ -86,25 +86,25 @@ test("ProgressTracker: one monotonic bar across video, audio and merge", () => {
 
 test("ProgressTracker: bytes, speed, ETA and audio conversion", () => {
   const t = new ProgressTracker(true);
-  t.update("YTDATA_FMT 251");
-  expect(t.update("YTDATA_PROG 251|downloading|50|NA|100|2048|7")).toMatchObject({
+  t.update("TUBELINE_FMT 251");
+  expect(t.update("TUBELINE_PROG 251|downloading|50|NA|100|2048|7")).toMatchObject({
     downloadedBytes: 50,
     totalBytes: 100,
     speed: 2048,
     eta: 7,
     streamPercent: 50,
   });
-  expect(t.update("YTDATA_POST ExtractAudio|started").stage).toBe("converting");
+  expect(t.update("TUBELINE_POST ExtractAudio|started").stage).toBe("converting");
 });
 
 test("ProgressTracker notices already-downloaded files (no bytes transferred)", () => {
   const t = new ProgressTracker(false);
-  t.update("YTDATA_FMT 18");
+  t.update("TUBELINE_FMT 18");
   expect(t.alreadyDownloaded).toBe(true);
 });
 
 test("removePartials deletes only this id's leftovers", () => {
-  const dir = mkdtempSync(join(tmpdir(), "yt-data-partials-"));
+  const dir = mkdtempSync(join(tmpdir(), "tubeline-partials-"));
   for (const f of [
     "T [abc].f398.mp4.part",
     "T [abc].f140.m4a",

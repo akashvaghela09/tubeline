@@ -90,7 +90,10 @@ export function queueTranscripts(
 export function queueThumbnails(ui: Ui, targets: Target[]) {
   const out = ui.prefs.thumbnailDir;
   for (const t of targets)
-    ui.jobs.add(t.id, t.title, { kind: "thumbnail", run: () => ui.services.thumbnail(t.id, out) });
+    ui.jobs.add(t.id, t.title, {
+      kind: "thumbnail",
+      run: () => ui.services.thumbnail(t.id, out, t.title),
+    });
   ui.toast(
     `Saving ${targets.length === 1 ? "thumbnail" : `${targets.length} thumbnails`} → ${tildify(out)}`,
     "ok",

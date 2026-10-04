@@ -85,7 +85,7 @@ export function loadConfig(
   isTTY = !!process.stdout.isTTY,
 ): Config {
   const paths = appPaths(env);
-  const file = readConfigFile(env.YT_DATA_CONFIG || join(paths.config, "config.json"));
+  const file = readConfigFile(env.TUBELINE_CONFIG || join(paths.config, "config.json"));
 
   if (flags.json && flags.format && flags.format !== "json") {
     throw new CliError("USAGE", `--json conflicts with --format ${flags.format}`);
@@ -97,11 +97,11 @@ export function loadConfig(
     throw new CliError("USAGE", `Unknown format "${format}"`, `Use one of: ${FORMATS.join(", ")}`);
   }
 
-  const envLog = env.YT_DATA_LOG as LogLevel | undefined;
+  const envLog = env.TUBELINE_LOG as LogLevel | undefined;
   if (envLog && !LOG_LEVELS.includes(envLog)) {
     throw new CliError(
       "USAGE",
-      `Invalid YT_DATA_LOG "${envLog}"`,
+      `Invalid TUBELINE_LOG "${envLog}"`,
       `Use one of: ${LOG_LEVELS.join(", ")}`,
     );
   }
@@ -117,23 +117,23 @@ export function loadConfig(
   }
 
   const noCache =
-    pick(flags.cache === false ? true : undefined, envBool(env.YT_DATA_NO_CACHE), file.noCache) ??
+    pick(flags.cache === false ? true : undefined, envBool(env.TUBELINE_NO_CACHE), file.noCache) ??
     false;
 
   return {
     format: format as Format,
     region,
-    cookies: pick(flags.cookies, env.YT_DATA_COOKIES || undefined, file.cookies),
+    cookies: pick(flags.cookies, env.TUBELINE_COOKIES || undefined, file.cookies),
     cookiesFromBrowser: pick(
       flags.cookiesFromBrowser,
-      env.YT_DATA_COOKIES_FROM_BROWSER || undefined,
+      env.TUBELINE_COOKIES_FROM_BROWSER || undefined,
       file.cookiesFromBrowser,
     ),
-    proxy: pick(flags.proxy, env.YT_DATA_PROXY || undefined, file.proxy),
-    cacheDir: pick(env.YT_DATA_CACHE_DIR || undefined, file.cacheDir) ?? paths.cache,
+    proxy: pick(flags.proxy, env.TUBELINE_PROXY || undefined, file.proxy),
+    cacheDir: pick(env.TUBELINE_CACHE_DIR || undefined, file.cacheDir) ?? paths.cache,
     noCache,
     cacheMode: noCache ? "off" : flags.refresh ? "refresh" : "normal",
-    updateCheck: pick(invert(envBool(env.YT_DATA_NO_UPDATE_CHECK)), file.updateCheck) ?? true,
+    updateCheck: pick(invert(envBool(env.TUBELINE_NO_UPDATE_CHECK)), file.updateCheck) ?? true,
     logLevel: pick(flagLog, envLog, file.logLevel) ?? "warn",
   };
 }

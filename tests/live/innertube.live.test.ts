@@ -1,4 +1,4 @@
-// Same scenarios against real YouTube. Opt-in: YT_DATA_LIVE=1 bun test
+// Same scenarios against real YouTube. Opt-in: TUBELINE_LIVE=1 bun test
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { CliError, type ErrorCode } from "../../src/core/errors.ts";
@@ -9,7 +9,7 @@ import { Transcript, Video, VideoSummary } from "../../src/models/video.ts";
 import { createInnertube, InnertubeSource } from "../../src/sources/innertube.ts";
 import { SCENARIOS } from "../helpers/scenarios.ts";
 
-const live = process.env.YT_DATA_LIVE === "1";
+const live = process.env.TUBELINE_LIVE === "1";
 
 const List = z.array(VideoSummary.strict()).min(1);
 
