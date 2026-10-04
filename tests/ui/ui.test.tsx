@@ -127,15 +127,24 @@ describe("download panel", () => {
     await new Promise((r) => setTimeout(r, 150));
     await ui.settle();
     const g = ui.frame();
-    expect(g).toContain("↓ 1 running");
-    expect(g).toMatch(/42% ━+/);
-    expect(g).toContain("4.8 MB/9.5 MB");
-    expect(g).toContain("ETA 0:03");
-    expect(g).toContain("video 1/2");
+    // One download: the status line shows its own name and progress in fixed columns.
+    expect(g).toMatch(/◆ Never Gonna Giv…\s+█+/); // title shortened to fit 100 columns
+    expect(g).toContain("42%");
+    expect(g).toContain("4.8 MB / 9.5 MB");
+    expect(g).toContain("0:03 left");
+    expect(g).toContain("Video");
+    // Ctrl+O shows the detail card for a single download.
+    await ui.key("o", { ctrl: true });
+    const card = ui.frame();
+    expect(card).toContain("◉ video");
+    expect(card).toContain("○ merge");
+    expect(card).toContain("video · up to 720p");
+    expect(card).toContain("to     /videos");
+    await ui.esc();
     release();
     await new Promise((r) => setTimeout(r, 20));
     await ui.settle();
-    expect(ui.frame()).toContain("^O to open folder");
+    expect(ui.frame()).toContain("✓ Saved Never Gonna Give You Up → /videos");
   });
 
   test("←→ change quality, one-off by default; space makes it the default", async () => {
@@ -307,17 +316,25 @@ describe("app", () => {
     expect(h.frame()).toMatch(/Theme\s+Gruvbox/);
   });
 
-  test("downloads screen lists jobs and cancels queued ones", async () => {
+  test("several downloads: overall status line; Ctrl+O table with a card for the selection", async () => {
     await openVideo({ downloadStep: () => new Promise(() => {}) });
     const ui = h as H;
     await ui.key("d");
     await ui.enter();
     await ui.key("a");
     await ui.enter();
+    expect(ui.frame()).toMatch(/↓ 1 downloading · 1 queued\s+█*\s*0% overall/);
     await ui.key("o", { ctrl: true });
-    expect(ui.frame()).toContain("2 jobs this session");
+    const f = ui.frame();
+    expect(f).toContain("2 downloads");
+    expect(f).toMatch(/title\s+size\s+speed\s+status/); // "time" column dropped at 100 columns
+    expect(f).toContain("Queued");
+    expect(f).toContain("Starting");
+    expect(f).toContain("audio · mp3"); // newest first: the queued audio job is selected
     await ui.key("x");
-    expect(ui.frame()).toContain("cancelled");
+    expect(ui.frame()).toContain("Cancelled");
+    await ui.key("ARROW_DOWN");
+    expect(ui.frame()).toContain("video · best quality");
   });
 });
 

@@ -4,6 +4,7 @@ import type { SearchResult } from "../models/search.ts";
 import type { VideoSummary } from "../models/video.ts";
 import type { Progress } from "../services/download.ts";
 import type { Part } from "./components.tsx";
+import type { Job } from "./jobs.ts";
 import { theme } from "./theme.ts";
 
 export function pad(s: string, w: number, align: "left" | "right" = "left"): string {
@@ -218,4 +219,153 @@ export function tildify(path: string, home = process.env.HOME ?? ""): string {
   return home && (path === home || path.startsWith(`${home}/`))
     ? `~${path.slice(home.length)}`
     : path;
+}
+
+// ── Download display ─────────────────────────────────────────────────────────
+
+export const STAGE_WIDTH = 10;
+
+/** One fixed-width word per job state, always in the same place. */
+export function stageWord(job: Job): string {
+  switch (job.status) {
+    case "queued":
+      return "Queued";
+    case "done":
+      return job.note === "already downloaded" ? "Had it" : "Saved";
+    case "failed":
+      return "Failed";
+    case "cancelled":
+      return "Cancelled";
+  }
+  const p = job.progress;
+  if (job.kind === "transcript" || job.kind === "thumbnail") return "Saving";
+  if (!p || p.stage === "preparing") return "Starting";
+  if (p.stage === "merging") return "Merging";
+  if (p.stage === "converting") return "Converting";
+  if (p.stage === "done") return "Saved";
+  if (job.kind === "audio") return "Audio";
+  return p.streams > 1 && p.stream > 1 ? "Audio" : "Video";
+}
+
+export function jobPercent(job: Job): number {
+  if (job.status === "done") return 100;
+  if (job.status !== "running") return 0;
+  return job.progress?.percent ?? 0;
+}
+
+/** "4.2 / 10 MB" while downloading, the final size when done, "" otherwise. */
+export function sizeText(job: Job): string {
+  if (job.status === "done") return job.bytes !== null ? bytes(job.bytes) : "";
+  const p = job.progress;
+  if (job.status === "running" && p?.stage === "downloading" && p.totalBytes) {
+    return `${bytes(p.downloadedBytes ?? 0)} / ${bytes(p.totalBytes)}`;
+  }
+  return job.estimate ? `≈ ${bytes(job.estimate)}` : "";
+}
+
+export function speedText(job: Job): string {
+  return job.status === "running" && job.progress?.stage === "downloading"
+    ? rate(job.progress.speed)
+    : "";
+}
+
+export function etaText(job: Job): string {
+  if (job.status === "done" && job.startedAt && job.finishedAt)
+    return `${clock((job.finishedAt - job.startedAt) / 1000)}`;
+  const p = job.progress;
+  return job.status === "running" && p?.stage === "downloading" && p.eta !== null
+    ? `${clock(p.eta)} left`
+    : "";
+}
+
+/** Stages for the strip on the detail card, and which one is current. */
+export function stageStrip(job: Job): { label: string; state: "done" | "now" | "todo" }[] {
+  const names =
+    job.kind === "video"
+      ? ["start", "video", "audio", "merge", "saved"]
+      : job.kind === "audio"
+        ? ["start", "audio", "convert", "saved"]
+        : ["start", "saved"];
+  const word = stageWord(job).toLowerCase();
+  const map: Record<string, string> = {
+    queued: "",
+    starting: "start",
+    video: "video",
+    audio: job.kind === "audio" ? "audio" : "audio",
+    merging: "merge",
+    converting: "convert",
+    saving: "start",
+    saved: "saved",
+    "had it": "saved",
+  };
+  const current = map[word] ?? "";
+  const at = current ? names.indexOf(current) : job.status === "done" ? names.length - 1 : -1;
+  return names.map((label, i) => ({
+    label,
+    state: job.status === "done" ? "done" : i < at ? "done" : i === at ? "now" : "todo",
+  }));
+}
+
+export interface Overall {
+  active: number;
+  queued: number;
+  done: number;
+  failed: number;
+  percent: number;
+  speed: number | null;
+  /** Seconds, when it can be estimated. */
+  eta: number | null;
+}
+
+/** Progress across the current batch: every job counts equally; queued ones at 0%. */
+export function overall(jobs: readonly Job[], batch: ReadonlySet<number>): Overall {
+  const inBatch = jobs.filter((j) => batch.has(j.key) && j.status !== "cancelled");
+  const running = inBatch.filter((j) => j.status === "running");
+  const speed = running.reduce((a, j) => a + (j.progress?.speed ?? 0), 0) || null;
+  const percent = inBatch.length
+    ? inBatch.reduce((a, j) => a + jobPercent(j), 0) / inBatch.length
+    : 0;
+  // ETA only when every unfinished job has a known size.
+  const left = inBatch
+    .filter((j) => j.status === "running" || j.status === "queued")
+    .map((j) => {
+      const total = j.progress?.totalBytes ?? j.estimate;
+      return total ? total * (1 - jobPercent(j) / 100) : null;
+    });
+  const known = left.filter((x): x is number => x !== null);
+  const eta =
+    speed && left.length && known.length === left.length
+      ? known.reduce((a, b) => a + b, 0) / speed
+      : null;
+  return {
+    active: running.length,
+    queued: inBatch.filter((j) => j.status === "queued").length,
+    done: inBatch.filter((j) => j.status === "done").length,
+    failed: inBatch.filter((j) => j.status === "failed").length,
+    percent,
+    speed,
+    eta,
+  };
+}
+
+export interface JobColumns {
+  title: number;
+  bar: number;
+  speed: boolean;
+  eta: boolean;
+}
+
+/**
+ * Widths for a one-line job row so it never overflows: the title keeps at least
+ * `minTitle`; "time left" then "speed" are dropped before the title gets squeezed.
+ * `fixed` is everything else on the line (icons, %, size, stage, gaps).
+ */
+export function jobColumns(total: number, fixed: number, minTitle = 16): JobColumns {
+  const bar = Math.max(10, Math.min(24, Math.floor(total / 6)));
+  let speed = true;
+  let eta = true;
+  const used = () => fixed + bar + (speed ? 12 : 0) + (eta ? 12 : 0);
+  if (total - used() < minTitle) eta = false;
+  if (total - used() < minTitle) speed = false;
+  return { title: Math.max(8, total - used()), bar, speed, eta };
 }

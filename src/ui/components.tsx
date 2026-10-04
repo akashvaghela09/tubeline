@@ -129,3 +129,40 @@ export function List({
     </box>
   );
 }
+
+const EIGHTHS = ["", "▏", "▎", "▍", "▌", "▋", "▊", "▉"];
+
+/**
+ * A solid progress bar: filled cells in `color` on a `track`-coloured background,
+ * advancing in eighths of a cell so it moves smoothly.
+ */
+export function Bar({
+  percent,
+  width: cells,
+  color,
+  track,
+}: {
+  percent: number;
+  width: number;
+  color?: string;
+  track?: string;
+}) {
+  const w = Math.max(1, cells);
+  const exact = (Math.max(0, Math.min(100, percent)) / 100) * w;
+  const full = Math.floor(exact);
+  const part = EIGHTHS[Math.floor((exact - full) * 8)] ?? "";
+  const rest = Math.max(0, w - full - (part ? 1 : 0));
+  const fg = color ?? theme.accent;
+  const bg = track ?? theme.faint;
+  return (
+    <span>
+      <span fg={fg}>{"█".repeat(full)}</span>
+      {part ? (
+        <span fg={fg} bg={bg}>
+          {part}
+        </span>
+      ) : null}
+      <span bg={bg}>{" ".repeat(rest)}</span>
+    </span>
+  );
+}

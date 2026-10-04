@@ -22,6 +22,10 @@ export interface Job {
   startedAt: number | null;
   finishedAt: number | null;
   bytes: number | null;
+  /** What was asked for (video/audio downloads): quality, format, folder. */
+  spec: DownloadSpec | null;
+  /** Expected size when known in advance (from the video's quality list). */
+  estimate: number | null;
 }
 
 export type JobTask =
@@ -35,6 +39,7 @@ export class JobQueue {
   private tasks = new Map<number, JobTask>();
   private next = 1;
   private running: { key: number; abort: AbortController } | null = null;
+  private batch = new Set<number>();
   private listeners = new Set<() => void>();
   private snapshot: readonly Job[] = [];
   private pending: ReturnType<typeof setTimeout> | null = null;
@@ -48,7 +53,9 @@ export class JobQueue {
 
   getSnapshot = (): readonly Job[] => this.snapshot;
 
-  add(videoId: string, title: string, task: JobTask): Job {
+  add(videoId: string, title: string, task: JobTask, estimate: number | null = null): Job {
+    // A new batch starts when nothing is queued or running: overall progress covers the batch.
+    if (!this.active().length) this.batch = new Set();
     const job: Job = {
       key: this.next++,
       kind: task.kind,
@@ -62,7 +69,10 @@ export class JobQueue {
       startedAt: null,
       finishedAt: null,
       bytes: null,
+      spec: "spec" in task ? task.spec : null,
+      estimate,
     };
+    this.batch.add(job.key);
     this.jobs.push(job);
     this.tasks.set(job.key, task);
     this.emit(true);
@@ -87,7 +97,12 @@ export class JobQueue {
     const job = this.jobs.find((j) => j.key === key);
     const task = this.tasks.get(key);
     if (!job || !task || (job.status !== "failed" && job.status !== "cancelled")) return;
-    this.add(job.videoId, job.title, task);
+    this.add(job.videoId, job.title, task, job.estimate);
+  }
+
+  /** Keys of the current batch (everything queued since the queue was last idle). */
+  batchKeys(): ReadonlySet<number> {
+    return this.batch;
   }
 
   active(): Job[] {

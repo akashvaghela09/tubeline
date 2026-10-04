@@ -14,8 +14,21 @@ import {
 import type { Ref } from "../core/resolve.ts";
 import { bytes, width as textWidth, truncate } from "../core/style.ts";
 import type { ListType, SearchType } from "../sources/innertube.ts";
-import { fitHints, type Hint, Keys, Line } from "./components.tsx";
-import { clock, progressLine, tildify } from "./format.ts";
+import { Bar, fitHints, type Hint, Keys, Line } from "./components.tsx";
+import {
+  clock,
+  etaText,
+  jobColumns,
+  jobPercent,
+  overall,
+  pad,
+  rate,
+  STAGE_WIDTH,
+  sizeText,
+  speedText,
+  stageWord,
+  tildify,
+} from "./format.ts";
 import type { Job, JobQueue } from "./jobs.ts";
 import { KEY_REFERENCE } from "./keys.ts";
 import { type Prefs, savePrefs } from "./prefs.ts";
@@ -97,7 +110,6 @@ export function useKeys(keys: Hint[]) {
   useEffect(() => ui.setKeys(keys), [sig]);
 }
 
-const PANEL_MAX = 3;
 /** Debug aid: YT_DATA_UI_KEYLOG=/path logs every key event the UI receives. */
 const KEYLOG = process.env.YT_DATA_UI_KEYLOG;
 
@@ -159,10 +171,19 @@ export function App({
     });
   }, [jobList, services, showToast]);
 
-  const panelJobs = pickPanelJobs(jobList);
-  const multi = jobList.filter((j) => j.status === "running" || j.status === "queued").length > 1;
-  const panelHeight = panelJobs.length ? panelJobs.length + (multi ? 1 : 0) : 0;
-  const bodyHeight = Math.max(3, height - 2 - 2 - (toast ? 1 : 0) - panelHeight);
+  const [, tick] = useState(0);
+  const batch = jobs.batchKeys();
+  const showStatus = statusVisible(jobList, batch) && top0(stack) !== "downloads";
+  // Finished downloads stay in the status line for a while; redraw when that runs out.
+  const lastFinish = Math.max(0, ...jobList.map((j) => j.finishedAt ?? 0));
+  useEffect(() => {
+    const left = lastFinish + STATUS_LINGER_MS - Date.now();
+    if (lastFinish && left > 0) {
+      const t = setTimeout(() => tick((n) => n + 1), left + 50);
+      return () => clearTimeout(t);
+    }
+  }, [lastFinish]);
+  const bodyHeight = Math.max(3, height - 2 - 2 - (toast ? 1 : 0) - (showStatus ? 1 : 0));
 
   // themeKey is a deliberate extra dependency: a new context object re-renders every screen.
   // biome-ignore lint/correctness/useExhaustiveDependencies: see above
@@ -259,7 +280,6 @@ export function App({
   });
 
   const crumbs = stack.map(crumb).filter(Boolean);
-  const status = jobStatus(jobList);
   const footer = fitHints(
     [...keys, ...(top.kind === "home" ? ([["^C", "quit"]] as Hint[]) : [])],
     [["?", "keys"]],
@@ -269,7 +289,7 @@ export function App({
   return (
     <UiContext.Provider value={ui}>
       <box flexDirection="column" width="100%" height="100%" backgroundColor={theme.bg}>
-        <Header crumbs={crumbs} status={status} width={width} />
+        <Header crumbs={crumbs} width={width} />
         <Line fg={theme.faint}>{"─".repeat(width)}</Line>
         <box flexDirection="column" flexGrow={1} paddingLeft={1} paddingRight={1}>
           <ScreenView screen={top} />
@@ -281,9 +301,7 @@ export function App({
             {` ${toast.kind === "error" ? "✗" : toast.kind === "ok" ? "✓" : "•"} ${toast.text}`}
           </Line>
         ) : null}
-        {panelJobs.length ? (
-          <JobsPanel jobs={panelJobs} all={jobList} width={width} showSummary={multi} />
-        ) : null}
+        {showStatus ? <StatusLine jobs={jobList} batch={batch} width={width} /> : null}
         <Line fg={theme.faint}>{"─".repeat(width)}</Line>
         <box paddingLeft={1}>
           <Keys keys={footer} />
@@ -318,9 +336,9 @@ function updateAll(ui: Ui) {
 
 export const actions = { checkSetup, updateAll };
 
-/** "yt-data › Marques Brownlee › Xiaomi 18 Pro Max › transcript" with live job status on the right. */
-function Header({ crumbs, status, width }: { crumbs: string[]; status: string; width: number }) {
-  const room = Math.max(10, width - 2 - 8 - (status ? textWidth(status) + 3 : 0));
+/** "yt-data › Marques Brownlee › Xiaomi 18 Pro Max › transcript". */
+function Header({ crumbs, width }: { crumbs: string[]; width: number }) {
+  const room = Math.max(10, width - 2 - 8);
   const parts = [...crumbs];
   // Shorten the longest crumb first, only as much as needed.
   for (let guard = 0; guard < 20; guard++) {
@@ -333,7 +351,6 @@ function Header({ crumbs, status, width }: { crumbs: string[]; status: string; w
     const p = parts[longest] as string;
     parts[longest] = truncate(p, Math.max(6, textWidth(p) - (total - room)));
   }
-  const left = 1 + 7 + parts.reduce((a, p) => a + 3 + textWidth(p), 0);
   return (
     <text wrapMode="none" truncate>
       <span fg={theme.accent}>
@@ -346,20 +363,96 @@ function Header({ crumbs, status, width }: { crumbs: string[]; status: string; w
           <span fg={i === parts.length - 1 ? theme.fg : theme.dim}>{p}</span>
         </span>
       ))}
-      {status ? (
-        <span fg={theme.accent}>
-          {" ".repeat(Math.max(2, width - left - textWidth(status) - 1)) + status}
-        </span>
-      ) : null}
     </text>
   );
 }
 
-function jobStatus(all: readonly Job[]): string {
-  const running = all.filter((j) => j.status === "running").length;
-  const queued = all.filter((j) => j.status === "queued").length;
-  if (!running && !queued) return "";
-  return `↓ ${running} running${queued ? ` · ${queued} queued` : ""}`;
+const STATUS_LINGER_MS = 15_000;
+
+function top0(stack: Screen[]): Screen["kind"] {
+  return (stack[stack.length - 1] as Screen).kind;
+}
+
+/** Show the status line while the batch is active, and briefly after it finishes. */
+function statusVisible(jobs: readonly Job[], batch: ReadonlySet<number>): boolean {
+  const mine = jobs.filter((j) => batch.has(j.key));
+  if (mine.some((j) => j.status === "running" || j.status === "queued")) return true;
+  const last = Math.max(0, ...mine.map((j) => j.finishedAt ?? 0));
+  return last > 0 && Date.now() - last < STATUS_LINGER_MS;
+}
+
+/**
+ * One line above the footer. A single download shows its own name and progress; several
+ * show the overall progress of the batch. Every value sits in a fixed column.
+ */
+function StatusLine({
+  jobs,
+  batch,
+  width,
+}: {
+  jobs: readonly Job[];
+  batch: ReadonlySet<number>;
+  width: number;
+}) {
+  const mine = jobs.filter((j) => batch.has(j.key) && j.status !== "cancelled");
+  const live = mine.filter((j) => j.status === "running" || j.status === "queued");
+  const cell = (s: string, w: number, align: "left" | "right" = "left") =>
+    pad(truncate(s, w), w, align);
+
+  if (live.length === 1 && mine.length === 1) {
+    const j = live[0] as Job;
+    // " ◆ " title "  " bar " 42%  " size(17) "  " [speed] [eta] stage " ^O"
+    const col = jobColumns(width - 1, 3 + 2 + 6 + 17 + 2 + STAGE_WIDTH + 3);
+    return (
+      <text wrapMode="none">
+        <span fg={theme.accent}>{" ◆ "}</span>
+        <span fg={theme.fg}>{`${cell(j.title, col.title)}  `}</span>
+        <Bar percent={jobPercent(j)} width={col.bar} />
+        <span fg={theme.fg}>{` ${cell(`${Math.floor(jobPercent(j))}%`, 4, "right")} `}</span>
+        <span fg={theme.dim}>
+          {`${cell(sizeText(j), 17, "right")}  ${col.speed ? `${cell(speedText(j), 10, "right")}  ` : ""}${col.eta ? `${cell(etaText(j), 10, "right")}  ` : ""}`}
+        </span>
+        <span fg={theme.accent}>{cell(stageWord(j), STAGE_WIDTH)}</span>
+        <span fg={theme.faint}>{" ^O"}</span>
+      </text>
+    );
+  }
+
+  const o = overall(jobs, batch);
+  if (live.length) {
+    const label = `${o.active} downloading${o.queued ? ` · ${o.queued} queued` : ""}${o.done ? ` · ${o.done} done` : ""}`;
+    // " ↓ " label "  " bar " 42% overall  " [speed] [eta] "  ^O details"
+    const col = jobColumns(width - 1, 3 + 2 + 14 + 12, Math.min(34, textWidth(label)));
+    return (
+      <text wrapMode="none">
+        <span fg={theme.accent}>{" ↓ "}</span>
+        <span fg={theme.fg}>{`${cell(label, col.title)}  `}</span>
+        <Bar percent={o.percent} width={col.bar} />
+        <span fg={theme.fg}>{` ${cell(`${Math.floor(o.percent)}%`, 4, "right")} overall `}</span>
+        <span fg={theme.dim}>
+          {`${col.speed ? `${cell(o.speed ? rate(o.speed) : "", 10, "right")}  ` : ""}${col.eta ? `${cell(o.eta !== null ? `~${clock(o.eta)} left` : "", 10, "right")}  ` : ""}`}
+        </span>
+        <span fg={theme.faint}>{"^O details"}</span>
+      </text>
+    );
+  }
+
+  // Finished: say what happened, briefly.
+  const saved = mine.filter((j) => j.status === "done");
+  const failed = mine.filter((j) => j.status === "failed");
+  const single = mine.length === 1 ? mine[0] : null;
+  const text = failed.length
+    ? `${failed.length} of ${mine.length} failed${saved.length ? ` · ${saved.length} saved` : ""}`
+    : single?.path
+      ? `Saved ${single.title} → ${tildify(single.path.slice(0, single.path.lastIndexOf("/")) || single.path)}${single.bytes !== null ? ` (${bytes(single.bytes)})` : ""}`
+      : `${saved.length} saved`;
+  return (
+    <text wrapMode="none" truncate>
+      <span fg={failed.length ? theme.red : theme.green}>{failed.length ? " ✗ " : " ✓ "}</span>
+      <span fg={theme.fg}>{text}</span>
+      <span fg={theme.faint}>{"   ^O details"}</span>
+    </text>
+  );
 }
 
 function ScreenView({ screen }: { screen: Screen }) {
@@ -419,97 +512,6 @@ function crumb(s: Screen): string {
     case "choice":
       return "";
   }
-}
-
-/** Running first, then queued, then the most recent finished ones, up to PANEL_MAX. */
-function pickPanelJobs(all: readonly Job[]): Job[] {
-  const running = all.filter((j) => j.status === "running");
-  const queued = all.filter((j) => j.status === "queued");
-  const recent = all
-    .filter(
-      (j) =>
-        (j.status === "done" || j.status === "failed" || j.status === "cancelled") &&
-        Date.now() - (j.finishedAt ?? 0) < 15_000,
-    )
-    .reverse();
-  return [...running, ...queued, ...recent].slice(0, PANEL_MAX);
-}
-
-function JobsPanel({
-  jobs,
-  all,
-  width,
-  showSummary,
-}: {
-  jobs: Job[];
-  all: readonly Job[];
-  width: number;
-  showSummary: boolean;
-}) {
-  const count = (s: Job["status"]) => all.filter((j) => j.status === s).length;
-  const summary = [
-    count("running") && `${count("running")} running`,
-    count("queued") && `${count("queued")} queued`,
-    count("done") && `${count("done")} done`,
-    count("failed") && `${count("failed")} failed`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  return (
-    <box flexDirection="column">
-      {showSummary ? <Line fg={theme.dim}>{` Downloads  ${summary}  ·  ^O all`}</Line> : null}
-      {jobs.map((j) => (
-        <JobLine key={j.key} job={j} width={width} />
-      ))}
-    </box>
-  );
-}
-
-export function JobLine({ job, width, selected }: { job: Job; width: number; selected?: boolean }) {
-  const cols = Math.max(20, width - 4);
-  const media = job.kind === "video" || job.kind === "audio";
-  let icon = "·";
-  let color: string = theme.dim;
-  let text = "";
-  if (job.status === "running") {
-    icon = "◆";
-    color = theme.accent;
-    if (media && job.progress)
-      text = progressLine(job.progress, job.kind as "video" | "audio", job.title, cols);
-    else if (media)
-      text = `  0% ${"─".repeat(Math.min(30, Math.floor(cols / 5)))}  fetching formats  ${job.title}`;
-    else text = `${job.kind}…  ${job.title}`;
-  } else if (job.status === "queued") {
-    text = `queued  ${job.kind}  ${job.title}`;
-  } else if (job.status === "done") {
-    icon = "✓";
-    color = theme.green;
-    const took =
-      job.startedAt && job.finishedAt ? clock((job.finishedAt - job.startedAt) / 1000) : "";
-    const size = job.bytes !== null ? bytes(job.bytes) : "";
-    text = [
-      job.note ?? "saved",
-      job.path ? tildify(job.path) : job.title,
-      size,
-      took,
-      selected ? "" : "· ^O to open folder",
-    ]
-      .filter(Boolean)
-      .join("  ");
-  } else if (job.status === "failed") {
-    icon = "✗";
-    color = theme.red;
-    text = `${job.error?.message ?? "failed"}  ${job.title}`;
-  } else {
-    icon = "–";
-    text = `cancelled  ${job.title}`;
-  }
-  return (
-    <text wrapMode="none" truncate bg={selected ? theme.cursorBg : undefined}>
-      <span fg={color}>{` ${icon} `}</span>
-      <span fg={job.status === "running" ? theme.fg : theme.dim}>{text}</span>
-    </text>
-  );
 }
 
 function refString(ref: Ref): string {
