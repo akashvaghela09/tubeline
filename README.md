@@ -3,6 +3,19 @@
 YouTube from the terminal: search, channel and video metadata, transcripts, thumbnails
 and downloads. An interactive app for people, JSON for scripts and AI agents.
 
+![tubeline demo: search, open a video, download, watch progress](assets/demo.gif)
+
+<details>
+<summary>Screenshots</summary>
+<br>
+
+| | | |
+|:-:|:-:|:-:|
+| <a href="assets/home.png"><img src="assets/home.png" width="280" alt="Home"></a><br>Home | <a href="assets/search.png"><img src="assets/search.png" width="280" alt="Search results"></a><br>Search | <a href="assets/video.png"><img src="assets/video.png" width="280" alt="Video"></a><br>Video |
+| <a href="assets/download.png"><img src="assets/download.png" width="280" alt="Download panel"></a><br>Download panel | <a href="assets/downloads.png"><img src="assets/downloads.png" width="280" alt="Downloads"></a><br>Downloads | <a href="assets/settings.png"><img src="assets/settings.png" width="280" alt="Settings"></a><br>Settings |
+
+</details>
+
 ## Install
 
 ```sh
