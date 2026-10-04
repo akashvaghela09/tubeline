@@ -258,7 +258,7 @@ export function sizeText(job: Job): string {
   if (job.status === "done") return job.bytes !== null ? bytes(job.bytes) : "";
   const p = job.progress;
   if (job.status === "running" && p?.stage === "downloading" && p.totalBytes) {
-    return `${bytes(p.downloadedBytes ?? 0)} / ${bytes(p.totalBytes)}`;
+    return `${bytes(p.downloadedBytes ?? 0)} / ${p.estimated ? "~" : ""}${bytes(p.totalBytes)}`;
   }
   return job.estimate ? `≈ ${bytes(job.estimate)}` : "";
 }

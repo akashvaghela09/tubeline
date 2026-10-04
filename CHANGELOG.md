@@ -22,6 +22,11 @@ Pre-1.0, breaking changes to the JSON output contract bump the minor version.
   and where, full error with hint).
 
 ### Fixed
+- Download progress stuck at 80% for fragmented (HLS/DASH) streams: yt-dlp's first size
+  estimate can equal the bytes already received ("712 of ~712 bytes"), which read as the
+  video stream being complete and locked the forward-only bar. Progress now follows the
+  fragment counter (fragment N of M) when available, estimates alone never reach 100%
+  before the stream finishes, and estimated sizes are shown as `~138 MB`.
 - Thumbnails: YouTube answers some missing sizes with a 120px grey placeholder instead of
   a 404; those are now skipped so the best real size is saved (maxres → sd → hq → mq →
   default). Thumbnails saved from the app are named `Title [id].jpg`.

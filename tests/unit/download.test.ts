@@ -8,6 +8,7 @@ import {
   ProgressTracker,
   removePartials,
   splitArgs,
+  streamPercent,
 } from "../../src/services/download.ts";
 
 test("formatArgs with ffmpeg", () => {
@@ -116,4 +117,39 @@ test("removePartials deletes only this id's leftovers", () => {
   }
   expect(removePartials(dir, "abc")).toBe(3);
   expect(readdirSync(dir).sort()).toEqual(["Other [xyz].mp4.part", "T [abc].mp4"]);
+});
+
+test("fragmented stream: a tiny first estimate doesn't lock the bar at 80% (regression)", () => {
+  // Real lines from video 4EZDqbIA2Ek (HLS format 616 + audio 140-20).
+  const t = new ProgressTracker(false);
+  const seen: number[] = [];
+  for (const line of [
+    "TUBELINE_FMT 616+140-20",
+    "TUBELINE_PROG 616|downloading|712|NA|712|1163.08|NA|1|131",
+    "TUBELINE_PROG 616|downloading|712|NA|186544.0|1163.08|NA|1|131",
+    "TUBELINE_PROG 616|downloading|625247|NA|81860721.0|900000|NA|2|131",
+    "TUBELINE_PROG 616|downloading|13131885|NA|122857760.5|3000000|40|13|131",
+    "TUBELINE_PROG 616|downloading|44209152|NA|144696773.7|3000000|30|39|131",
+    "TUBELINE_PROG 616|downloading|113000000|NA|138000000|3100000|9|107|131",
+    "TUBELINE_PROG 616|finished|138000000|NA|138000000|3100000|NA|131|131",
+    "TUBELINE_PROG 140-20|downloading|1024|NA|2000000|NA|NA|1|25",
+  ]) {
+    seen.push(Math.floor(t.update(line).percent));
+  }
+  expect(seen[1]).toBe(0); // was 80 before the fix
+  expect(seen[2]).toBe(0);
+  expect(seen[4]).toBe(7); // fragment 13 of 131
+  expect(seen[6]).toBe(65); // fragment 107 of 131
+  expect(seen[7]).toBe(80); // video stream finished
+  expect(seen).toEqual([...seen].sort((a, b) => a - b));
+  const p = t.update("TUBELINE_PROG 616|downloading|113000000|NA|138000000|3100000|9|107|131");
+  expect(p.estimated).toBe(true);
+});
+
+test("streamPercent: fragments beat estimates; estimates never reach 100 early", () => {
+  expect(streamPercent("downloading", 712, null, 712, 1, 131)).toBe(0);
+  expect(streamPercent("downloading", 712, null, 712, null, null)).toBe(99);
+  expect(streamPercent("downloading", 50, 100, null, null, null)).toBe(50);
+  expect(streamPercent("finished", null, null, null, null, null)).toBe(100);
+  expect(streamPercent("downloading", null, null, null, null, null)).toBeNull();
 });

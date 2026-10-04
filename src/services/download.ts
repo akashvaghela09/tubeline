@@ -111,6 +111,8 @@ export interface Progress {
   /** Current stream, 0–100. */
   streamPercent: number | null;
   totalBytes: number | null;
+  /** totalBytes is yt-dlp's running estimate (fragmented streams), not the real size. */
+  estimated: boolean;
   downloadedBytes: number | null;
   /** Bytes per second. */
   speed: number | null;
@@ -130,10 +132,32 @@ export const PROGRESS_ARGS = [
   "--progress",
   "--newline",
   "--progress-template",
-  `download:${PROG_TAG}%(info.format_id)s|%(progress.status)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s`,
+  `download:${PROG_TAG}%(info.format_id)s|%(progress.status)s|%(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s|%(progress.fragment_index)s|%(progress.fragment_count)s`,
   "--progress-template",
   `postprocess:${POST_TAG}%(progress.postprocessor)s|%(progress.status)s`,
 ];
+
+/**
+ * Percent of one stream. Fragmented (HLS/DASH) downloads report fragment N of M, which is
+ * reliable; their byte total is only a running estimate that starts out tiny (the first
+ * line can read "712 of ~712 bytes"), so an estimate alone never reaches 100% before
+ * yt-dlp says the stream is finished.
+ */
+export function streamPercent(
+  status: string | undefined,
+  done: number | null,
+  total: number | null,
+  estimate: number | null,
+  fragIndex: number | null,
+  fragCount: number | null,
+): number | null {
+  if (status === "finished") return 100;
+  if (fragIndex !== null && fragCount)
+    return Math.min(99, (Math.max(0, fragIndex - 1) / fragCount) * 100);
+  if (done !== null && total) return Math.min(100, (done / total) * 100);
+  if (done !== null && estimate) return Math.min(99, (done / estimate) * 100);
+  return null;
+}
 
 const num = (v: string | undefined): number | null => {
   const n = Number(v);
@@ -153,6 +177,7 @@ export class ProgressTracker {
     percent: 0,
     streamPercent: null,
     totalBytes: null,
+    estimated: false,
     downloadedBytes: null,
     speed: null,
     eta: null,
@@ -175,23 +200,27 @@ export class ProgressTracker {
       this.formats = line.slice(FMT_TAG.length).trim().split("+");
       s.streams = Math.max(1, this.formats.length);
     } else if (line.startsWith(PROG_TAG)) {
-      const [fmt, status, done, total, estimate, speed, eta] = line
+      const [fmt, status, done, total, estimate, speed, eta, fragIndex, fragCount] = line
         .slice(PROG_TAG.length)
         .split("|");
       const index = this.formats.indexOf(fmt ?? "");
       s.stream = index >= 0 ? index + 1 : Math.max(1, s.stream);
       s.stage = "downloading";
       if (status === "downloading") this.sawDownload = true;
-      s.totalBytes = num(total) ?? num(estimate);
+      const exact = num(total);
+      s.totalBytes = exact ?? num(estimate);
+      s.estimated = exact === null && s.totalBytes !== null;
       s.downloadedBytes = num(done);
-      s.streamPercent =
-        status === "finished"
-          ? 100
-          : s.totalBytes && s.downloadedBytes !== null
-            ? (s.downloadedBytes / s.totalBytes) * 100
-            : null;
       s.speed = num(speed);
       s.eta = num(eta);
+      s.streamPercent = streamPercent(
+        status,
+        s.downloadedBytes,
+        exact,
+        num(estimate),
+        num(fragIndex),
+        num(fragCount),
+      );
     } else if (line.startsWith(POST_TAG)) {
       const [pp, status] = line.slice(POST_TAG.length).split("|");
       if (status === "started") {

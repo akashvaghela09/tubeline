@@ -18,6 +18,7 @@ const progress = (p: Partial<Progress>): Progress => ({
   percent: 0,
   streamPercent: 0,
   totalBytes: null,
+  estimated: false,
   downloadedBytes: null,
   speed: null,
   eta: null,
